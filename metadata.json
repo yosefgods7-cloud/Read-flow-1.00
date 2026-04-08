@@ -1,0 +1,5 @@
+{
+  "name": "ReadFlow",
+  "description": "A fast, offline-first PDF reader PWA.",
+  "requestFramePermissions": []
+}
