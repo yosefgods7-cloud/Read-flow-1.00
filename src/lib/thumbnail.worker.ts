@@ -30,7 +30,7 @@ self.onmessage = async (e: MessageEvent) => {
       throw new Error('Could not get 2d context');
     }
     
-    await page.render({ canvasContext: context as any, viewport: scaledViewport }).promise;
+    await page.render({ canvasContext: context as any, viewport: scaledViewport } as any).promise;
     
     const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.7 });
     const reader = new FileReader();
