@@ -1,49 +1,53 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+let worker: Worker | null = null;
+let messageIdCounter = 0;
+const pendingResolvers = new Map<number, { resolve: (url?: string) => void, reject: (err: any) => void }>();
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+function getWorker() {
+  if (!worker) {
+    worker = new Worker(new URL('./thumbnail.worker.ts', import.meta.url), { type: 'module' });
+    worker.onmessage = (e) => {
+      const { id, dataUrl, success, error } = e.data;
+      const resolver = pendingResolvers.get(id);
+      if (resolver) {
+        if (success) {
+          resolver.resolve(dataUrl);
+        } else {
+          resolver.reject(new Error(error));
+        }
+        pendingResolvers.delete(id);
+      }
+    };
+  }
+  return worker;
+}
 
 export async function generatePdfThumbnail(file: File): Promise<string | undefined> {
-  let url = '';
-  let loadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
-  try {
-    url = URL.createObjectURL(file);
-    loadingTask = pdfjsLib.getDocument(url);
-    
-    // Add a timeout to prevent hanging
-    const pdf = await Promise.race([
-      loadingTask.promise,
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Thumbnail generation timed out')), 5000))
-    ]);
-    
-    const page = await pdf.getPage(1);
-    
-    const viewport = page.getViewport({ scale: 1.0 });
-    const scale = 120 / viewport.width; // Max width ~120px
-    const scaledViewport = page.getViewport({ scale });
-    
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
-    if (!context) return undefined;
-    
-    canvas.height = scaledViewport.height;
-    canvas.width = scaledViewport.width;
-    
-    await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-    
-    await pdf.destroy();
-    
-    return dataUrl;
-  } catch (err) {
-    console.error('Error generating thumbnail:', err);
-    if (loadingTask) {
-      loadingTask.destroy().catch(console.error);
+  return new Promise((resolve) => {
+    try {
+      const w = getWorker();
+      const id = messageIdCounter++;
+      
+      pendingResolvers.set(id, { 
+        resolve, 
+        reject: (err) => {
+          console.error('Worker thumbnail error:', err);
+          resolve(undefined); // Fallback to undefined on error
+        } 
+      });
+      
+      w.postMessage({ file, id });
+      
+      // Safety timeout on the main thread side
+      setTimeout(() => {
+        if (pendingResolvers.has(id)) {
+          console.error('Worker thumbnail generation timed out');
+          pendingResolvers.delete(id);
+          resolve(undefined);
+        }
+      }, 10000);
+    } catch (err) {
+      console.error('Error dispatching to worker:', err);
+      resolve(undefined);
     }
-    return undefined;
-  } finally {
-    if (url) {
-      URL.revokeObjectURL(url);
-    }
-  }
+  });
 }
