@@ -67,11 +67,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
     setIsUploading(true);
     try {
       for (let i = 0; i < files.length; i++) {
-        if (files[i].type === 'application/pdf') {
+        if (files[i].type === 'application/pdf' || files[i].name.toLowerCase().endsWith('.pdf')) {
           await addPdf(files[i]);
         }
       }
       onRefresh();
+    } catch (err) {
+      console.error('Error importing PDFs:', err);
+      alert('Failed to import one or more PDFs. They might be too large or corrupted.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -277,7 +280,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
         </div>
       </div>
 
-      <div className="flex-1">
+      <div className="flex-1 min-h-0">
         {filteredPdfs.length === 0 ? (
           <div className="text-center py-20 text-zinc-500">
             <p>No PDFs in this list.</p>

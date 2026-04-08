@@ -27,7 +27,7 @@ export default function App() {
   const currentPdf = currentPdfId ? pdfs.find(p => p.id === currentPdfId) : null;
 
   return (
-    <div className="h-full w-full bg-zinc-950 text-zinc-50">
+    <div className="h-screen w-full bg-zinc-950 text-zinc-50">
       {currentPdf ? (
         <ReaderView 
           currentPdf={currentPdf} 

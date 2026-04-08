@@ -4,10 +4,18 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 export async function generatePdfThumbnail(file: File): Promise<string | undefined> {
+  let url = '';
+  let loadingTask: pdfjsLib.PDFDocumentLoadingTask | null = null;
   try {
-    const url = URL.createObjectURL(file);
-    const loadingTask = pdfjsLib.getDocument(url);
-    const pdf = await loadingTask.promise;
+    url = URL.createObjectURL(file);
+    loadingTask = pdfjsLib.getDocument(url);
+    
+    // Add a timeout to prevent hanging
+    const pdf = await Promise.race([
+      loadingTask.promise,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Thumbnail generation timed out')), 5000))
+    ]);
+    
     const page = await pdf.getPage(1);
     
     const viewport = page.getViewport({ scale: 1.0 });
@@ -25,11 +33,17 @@ export async function generatePdfThumbnail(file: File): Promise<string | undefin
     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
     
     await pdf.destroy();
-    URL.revokeObjectURL(url);
     
     return dataUrl;
   } catch (err) {
     console.error('Error generating thumbnail:', err);
+    if (loadingTask) {
+      loadingTask.destroy().catch(console.error);
+    }
     return undefined;
+  } finally {
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
   }
 }
