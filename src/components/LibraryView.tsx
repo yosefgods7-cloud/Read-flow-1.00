@@ -179,10 +179,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">ReadFlow</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">ReadFlow</h1>
         
-        <div className="flex items-center gap-4 flex-1 sm:max-w-md ml-auto">
+        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto sm:flex-1 sm:max-w-md sm:ml-auto">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={16} className="text-zinc-500" />
@@ -225,30 +225,30 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-2">
-        <div className="flex gap-4 overflow-x-auto">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 border-b border-zinc-800 pb-2">
+        <div className="flex gap-2 sm:gap-4 overflow-x-auto pb-2 lg:pb-0 scrollbar-hide">
           {(['to-read', 'reading', 'completed'] as Tab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={clsx(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
+                "px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
                 activeTab === tab ? "bg-zinc-800 text-zinc-50" : "text-zinc-400 hover:text-zinc-200"
               )}
             >
               {tab.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-              <span className="ml-2 text-xs bg-zinc-800/50 px-2 py-0.5 rounded-full">
+              <span className="ml-1.5 sm:ml-2 text-[10px] sm:text-xs bg-zinc-800/50 px-1.5 sm:px-2 py-0.5 rounded-full">
                 {pdfs.filter(p => p.status === tab).length}
               </span>
             </button>
           ))}
         </div>
         
-        <div className="flex items-center gap-2 overflow-x-auto text-sm">
-          <span className="text-zinc-500 mr-2">Sort:</span>
+        <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto text-xs sm:text-sm pb-2 lg:pb-0 scrollbar-hide">
+          <span className="text-zinc-500 mr-1 sm:mr-2 shrink-0">Sort:</span>
           <button 
             onClick={() => toggleSort('order')}
-            className={clsx("flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors", sortBy === 'order' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
+            className={clsx("flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-colors shrink-0", sortBy === 'order' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
           >
             <ListOrdered size={14} />
             Order
@@ -256,14 +256,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
           </button>
           <button 
             onClick={() => toggleSort('name')}
-            className={clsx("flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors", sortBy === 'name' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
+            className={clsx("flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-colors shrink-0", sortBy === 'name' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
           >
             {sortOrder === 'asc' ? <ArrowDownAZ size={14} /> : <ArrowUpAZ size={14} />}
             Name
           </button>
           <button 
             onClick={() => toggleSort('date')}
-            className={clsx("flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors", sortBy === 'date' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
+            className={clsx("flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-colors shrink-0", sortBy === 'date' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
           >
             <Calendar size={14} />
             Date
@@ -271,7 +271,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
           </button>
           <button 
             onClick={() => toggleSort('size')}
-            className={clsx("flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors", sortBy === 'size' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
+            className={clsx("flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-colors shrink-0", sortBy === 'size' ? "bg-zinc-800 text-zinc-100" : "text-zinc-400 hover:bg-zinc-800/50")}
           >
             <HardDrive size={14} />
             Size
@@ -343,25 +343,25 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => onOpenPdf(pdf.id)} className="p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800 rounded-full" title="Read">
+                  <div className="flex items-center gap-1 sm:gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-zinc-800/50 sm:border-0">
+                    <button onClick={() => onOpenPdf(pdf.id)} className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800 rounded-full" title="Read">
                       <Play size={16} />
                     </button>
-                    <button onClick={() => handleTogglePriority(pdf)} className={clsx("p-2 rounded-full", pdf.priority ? "text-yellow-500 bg-yellow-500/10" : "text-zinc-400 hover:text-zinc-100 bg-zinc-800")} title="Priority">
+                    <button onClick={() => handleTogglePriority(pdf)} className={clsx("p-1.5 sm:p-2 rounded-full", pdf.priority ? "text-yellow-500 bg-yellow-500/10" : "text-zinc-400 hover:text-zinc-100 bg-zinc-800")} title="Priority">
                       <Star size={16} />
                     </button>
-                    <button onClick={() => handleRename(pdf)} className="p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800 rounded-full" title="Rename">
+                    <button onClick={() => handleRename(pdf)} className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800 rounded-full" title="Rename">
                       <Edit2 size={16} />
                     </button>
-                    <div className="flex flex-col gap-1 mx-1">
-                      <button onClick={() => handleMove(pdf, 'up')} disabled={index === 0 || sortBy !== 'order'} className="text-zinc-500 hover:text-zinc-300 disabled:opacity-30" title={sortBy !== 'order' ? "Sort by Order to move" : "Move Up"}>
+                    <div className="flex flex-row sm:flex-col gap-1 mx-1">
+                      <button onClick={() => handleMove(pdf, 'up')} disabled={index === 0 || sortBy !== 'order'} className="p-1 sm:p-0 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 bg-zinc-800 sm:bg-transparent rounded sm:rounded-none" title={sortBy !== 'order' ? "Sort by Order to move" : "Move Up"}>
                         <ArrowUp size={14} />
                       </button>
-                      <button onClick={() => handleMove(pdf, 'down')} disabled={index === filteredPdfs.length - 1 || sortBy !== 'order'} className="text-zinc-500 hover:text-zinc-300 disabled:opacity-30" title={sortBy !== 'order' ? "Sort by Order to move" : "Move Down"}>
+                      <button onClick={() => handleMove(pdf, 'down')} disabled={index === filteredPdfs.length - 1 || sortBy !== 'order'} className="p-1 sm:p-0 text-zinc-500 hover:text-zinc-300 disabled:opacity-30 bg-zinc-800 sm:bg-transparent rounded sm:rounded-none" title={sortBy !== 'order' ? "Sort by Order to move" : "Move Down"}>
                         <ArrowDown size={14} />
                       </button>
                     </div>
-                    <button onClick={() => handleDelete(pdf.id)} className="p-2 text-red-400 hover:text-red-300 bg-red-400/10 rounded-full ml-auto sm:ml-0" title="Delete">
+                    <button onClick={() => handleDelete(pdf.id)} className="p-1.5 sm:p-2 text-red-400 hover:text-red-300 bg-red-400/10 rounded-full ml-auto sm:ml-0" title="Delete">
                       <Trash2 size={16} />
                     </button>
                   </div>

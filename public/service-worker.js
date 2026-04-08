@@ -1,4 +1,4 @@
-const CACHE_NAME = 'readflow-cache-v2';
+const CACHE_NAME = 'readflow-cache-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -16,19 +16,32 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Use network-first strategy to prevent stale blank screens
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
-    fetch(event.request).catch(async () => {
-      const cachedResponse = await caches.match(event.request);
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return new Response('Network error and no cache available', {
-        status: 503,
-        statusText: 'Service Unavailable',
-        headers: new Headers({ 'Content-Type': 'text/plain' })
-      });
-    })
+    fetch(event.request)
+      .then(response => {
+        // Cache successful network responses dynamically
+        if (response.status === 200 && response.type === 'basic') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      })
+      .catch(async () => {
+        // Fallback to cache if network fails
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return new Response('Network error and no cache available', {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: new Headers({ 'Content-Type': 'text/plain' })
+        });
+      })
   );
 });
 

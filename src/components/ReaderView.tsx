@@ -253,34 +253,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     <div className="fixed inset-0 bg-zinc-950 flex flex-col z-50">
       {/* Top Bar */}
       <div className={clsx(
-        "absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex items-center text-white transition-opacity duration-300",
+        "absolute top-0 left-0 right-0 p-2 sm:p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex items-center text-white transition-opacity duration-300",
         showUi ? "opacity-100" : "opacity-0 pointer-events-none"
       )}>
-        <button onClick={onBack} className="p-2 rounded-full bg-black/50 hover:bg-black/80">
-          <ArrowLeft size={24} />
+        <button onClick={onBack} className="p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/80 shrink-0">
+          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
-        <div className="ml-4 truncate flex-1 font-medium">{currentPdf.name}</div>
-        <div className="text-sm font-mono mr-4">{currentPage} / {numPages || '?'}</div>
+        <div className="ml-2 sm:ml-4 truncate flex-1 font-medium text-sm sm:text-base">{currentPdf.name}</div>
+        <div className="text-xs sm:text-sm font-mono mr-2 sm:mr-4 shrink-0">{currentPage} / {numPages || '?'}</div>
         
-        <button onClick={toggleBookmark} className={clsx("p-2 rounded-full mr-2 transition-colors", bookmarks.includes(currentPage) ? "bg-blue-500/80 hover:bg-blue-500" : "bg-black/50 hover:bg-black/80")}>
-          {bookmarks.includes(currentPage) ? <BookmarkCheck size={24} /> : <Bookmark size={24} />}
-        </button>
-        
-        <button onClick={(e) => { e.stopPropagation(); setShowBookmarks(!showBookmarks); setShowSettings(false); }} className="p-2 rounded-full bg-black/50 hover:bg-black/80 mr-2">
-          <List size={24} />
-        </button>
+        <div className="flex items-center shrink-0">
+          <button onClick={toggleBookmark} className={clsx("p-1.5 sm:p-2 rounded-full mr-1 sm:mr-2 transition-colors", bookmarks.includes(currentPage) ? "bg-blue-500/80 hover:bg-blue-500" : "bg-black/50 hover:bg-black/80")}>
+            {bookmarks.includes(currentPage) ? <BookmarkCheck className="w-5 h-5 sm:w-6 sm:h-6" /> : <Bookmark className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </button>
+          
+          <button onClick={(e) => { e.stopPropagation(); setShowBookmarks(!showBookmarks); setShowSettings(false); }} className="p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/80 mr-1 sm:mr-2">
+            <List className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
 
-        <button onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); setShowBookmarks(false); }} className="p-2 rounded-full bg-black/50 hover:bg-black/80 mr-2">
-          <Settings size={24} />
-        </button>
-        <button onClick={toggleFullscreen} className="p-2 rounded-full bg-black/50 hover:bg-black/80">
-          {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
-        </button>
+          <button onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); setShowBookmarks(false); }} className="p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/80 mr-1 sm:mr-2">
+            <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+          <button onClick={toggleFullscreen} className="p-1.5 sm:p-2 rounded-full bg-black/50 hover:bg-black/80 hidden sm:block">
+            {isFullscreen ? <Minimize className="w-5 h-5 sm:w-6 sm:h-6" /> : <Maximize className="w-5 h-5 sm:w-6 sm:h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Bookmarks Panel */}
       {showBookmarks && (
-        <div className="absolute top-20 right-16 w-64 max-h-96 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm" onClick={e => e.stopPropagation()}>
+        <div className="absolute top-14 sm:top-20 right-2 sm:right-16 w-[calc(100vw-1rem)] sm:w-64 max-h-[60vh] sm:max-h-96 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm" onClick={e => e.stopPropagation()}>
           <h3 className="font-medium text-zinc-100 mb-3 flex items-center gap-2">
             <Bookmark size={16} /> Bookmarks
           </h3>
@@ -305,7 +307,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="absolute top-20 right-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm w-72" onClick={e => e.stopPropagation()}>
+        <div className="absolute top-14 sm:top-20 right-2 sm:right-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm w-[calc(100vw-1rem)] sm:w-72 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
           <h3 className="font-medium text-zinc-100 mb-4">Reader Settings</h3>
           <div className="flex flex-col gap-4">
             
