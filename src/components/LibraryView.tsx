@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { PdfDocument, addPdf, deletePdf, updatePdf } from '../lib/db';
-import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical, FileText } from 'lucide-react';
+import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical, FileText, Search, X } from 'lucide-react';
 import clsx from 'clsx';
 
 interface LibraryViewProps {
@@ -16,6 +16,7 @@ type SortOrder = 'asc' | 'desc';
 
 export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpenPdf }) => {
   const [activeTab, setActiveTab] = useState<Tab>('to-read');
+  const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortBy>('order');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isUploading, setIsUploading] = useState(false);
@@ -23,7 +24,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredPdfs = pdfs.filter(p => p.status === activeTab).sort((a, b) => {
+  const filteredPdfs = pdfs
+    .filter(p => p.status === activeTab)
+    .filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
     if (a.priority && !b.priority) return -1;
     if (!a.priority && b.priority) return 1;
     
@@ -172,25 +176,49 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-6">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <h1 className="text-3xl font-bold tracking-tight">ReadFlow</h1>
-        <div>
-          <input 
-            type="file" 
-            multiple 
-            accept="application/pdf" 
-            className="hidden" 
-            ref={fileInputRef}
-            onChange={handleImport}
-          />
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="flex items-center gap-2 bg-zinc-100 text-zinc-900 px-4 py-2 rounded-full font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50"
-          >
-            <Upload size={18} />
-            {isUploading ? 'Importing...' : 'Import PDFs'}
-          </button>
+        
+        <div className="flex items-center gap-4 flex-1 sm:max-w-md ml-auto">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={16} className="text-zinc-500" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search PDFs..."
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-full py-2 pl-10 pr-10 text-sm focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all placeholder:text-zinc-600"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-300"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          
+          <div>
+            <input 
+              type="file" 
+              multiple 
+              accept="application/pdf" 
+              className="hidden" 
+              ref={fileInputRef}
+              onChange={handleImport}
+            />
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center gap-2 bg-zinc-100 text-zinc-900 px-4 py-2 rounded-full font-medium hover:bg-zinc-200 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              <Upload size={18} />
+              {isUploading ? 'Importing...' : 'Import'}
+            </button>
+          </div>
         </div>
       </div>
 
