@@ -18,8 +18,16 @@ self.addEventListener('install', event => {
 self.addEventListener('fetch', event => {
   // Use network-first strategy to prevent stale blank screens
   event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+    fetch(event.request).catch(async () => {
+      const cachedResponse = await caches.match(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return new Response('Network error and no cache available', {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: new Headers({ 'Content-Type': 'text/plain' })
+      });
     })
   );
 });

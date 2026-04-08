@@ -34,7 +34,7 @@ console.log('App starting...');
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  rootEl.innerHTML = '<div style="color: white; padding: 20px;">Loading app...</div>';
+  rootEl.innerHTML = '<div style="color: white; background-color: #09090b; height: 100vh; width: 100vw; display: flex; align-items: center; justify-content: center; font-family: sans-serif;">Loading app...</div>';
   createRoot(rootEl).render(
     <StrictMode>
       <ErrorBoundary>
