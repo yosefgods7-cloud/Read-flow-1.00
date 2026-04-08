@@ -376,16 +376,24 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
         onClick={handleTap}
       >
         {!pdf ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
-              <div className="text-center">
-                <p className="text-zinc-200 font-medium mb-1">Loading {currentPdf.name}</p>
+          <div className="flex items-center justify-center h-full px-6">
+            <div className="flex flex-col items-center w-full max-w-sm">
+              <div className="text-center w-full mb-6">
+                <h2 className="text-zinc-100 font-medium text-lg mb-2 truncate px-4" title={currentPdf.name}>
+                  {currentPdf.name}
+                </h2>
                 <p className="text-zinc-400 text-sm">
                   {loadProgress > 0 && loadProgress < 100 
                     ? `Reading file... ${loadProgress}%` 
                     : `Preparing page ${currentPdf.lastPage || 1}...`}
                 </p>
+              </div>
+              
+              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+                <div 
+                  className="bg-zinc-200 h-full rounded-full transition-all duration-300 ease-out" 
+                  style={{ width: `${Math.max(5, loadProgress)}%` }}
+                />
               </div>
             </div>
           </div>
