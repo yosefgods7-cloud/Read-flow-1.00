@@ -1,4 +1,5 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { generatePdfThumbnail } from './pdfUtils';
 
 export interface PdfDocument {
   id: string;
@@ -11,6 +12,7 @@ export interface PdfDocument {
   lastPage: number;
   priority: boolean;
   addedAt: number;
+  thumbnail?: string;
 }
 
 interface ReadFlowDB extends DBSchema {
@@ -49,6 +51,8 @@ export async function addPdf(file: File) {
   let cursor = await index.openCursor(null, 'prev'); // Get highest order first
   const maxOrder = cursor ? cursor.value.order : 0;
   
+  const thumbnail = await generatePdfThumbnail(file);
+  
   const doc: PdfDocument = {
     id,
     name: file.name,
@@ -60,6 +64,7 @@ export async function addPdf(file: File) {
     lastPage: 1,
     priority: false,
     addedAt: Date.now(),
+    thumbnail,
   };
   await db.put('pdfs', doc);
   return doc;

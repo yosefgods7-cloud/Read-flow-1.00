@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { PdfDocument, addPdf, deletePdf, updatePdf } from '../lib/db';
-import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical } from 'lucide-react';
+import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical, FileText } from 'lucide-react';
 import clsx from 'clsx';
 
 interface LibraryViewProps {
@@ -280,27 +280,36 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
                       <GripVertical size={20} />
                     </div>
                   )}
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => onOpenPdf(pdf.id)}>
-                    <div className="flex items-center gap-2 mb-1">
-                      {pdf.priority && <Star size={16} className="text-yellow-500 fill-yellow-500" />}
-                      <h3 className="font-medium text-zinc-100 truncate">{pdf.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
-                      <span>{(pdf.size / 1024 / 1024).toFixed(1)} MB</span>
-                      {pdf.progress > 0 && (
-                        <span className="text-zinc-400">
-                          {pdf.progress.toFixed(0)}% • Page {pdf.lastPage}
-                        </span>
+                  <div className="flex-1 min-w-0 cursor-pointer flex gap-4" onClick={() => onOpenPdf(pdf.id)}>
+                    <div className="w-12 h-16 sm:w-16 sm:h-20 flex-shrink-0 bg-zinc-800 rounded overflow-hidden flex items-center justify-center shadow-sm">
+                      {pdf.thumbnail ? (
+                        <img src={pdf.thumbnail} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <FileText size={24} className="text-zinc-600" />
                       )}
                     </div>
-                    {pdf.progress > 0 && (
-                      <div className="w-full bg-zinc-800 h-1 mt-3 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-zinc-400 h-full rounded-full" 
-                          style={{ width: `${pdf.progress}%` }}
-                        />
+                    <div className="flex-1 min-w-0 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-1">
+                        {pdf.priority && <Star size={16} className="text-yellow-500 fill-yellow-500" />}
+                        <h3 className="font-medium text-zinc-100 truncate">{pdf.name}</h3>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3 text-xs text-zinc-500">
+                        <span>{(pdf.size / 1024 / 1024).toFixed(1)} MB</span>
+                        {pdf.progress > 0 && (
+                          <span className="text-zinc-400">
+                            {pdf.progress.toFixed(0)}% • Page {pdf.lastPage}
+                          </span>
+                        )}
+                      </div>
+                      {pdf.progress > 0 && (
+                        <div className="w-full bg-zinc-800 h-1 mt-3 rounded-full overflow-hidden">
+                          <div 
+                            className="bg-zinc-400 h-full rounded-full" 
+                            style={{ width: `${pdf.progress}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity">
