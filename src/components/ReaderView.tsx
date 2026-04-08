@@ -22,6 +22,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>(currentPdf.bookmarks || []);
   const [autoAdvanceDelay, setAutoAdvanceDelay] = useLocalStorage<number>('readflow-auto-advance', 1500);
+  const [autoScrollSpeed, setAutoScrollSpeed] = useLocalStorage<number>('readflow-auto-scroll', 0);
+  const [volumeScroll, setVolumeScroll] = useLocalStorage<boolean>('readflow-volume-scroll', false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
 
@@ -164,6 +166,55 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     }
   }, [endIntersection?.isIntersecting, nextPdfDoc, onNextPdf, autoAdvanceDelay]);
 
+  // Auto-scroll logic
+  useEffect(() => {
+    if (!autoScrollSpeed || autoScrollSpeed <= 0) return;
+    
+    let animationFrameId: number;
+    let lastTime = performance.now();
+
+    const scrollStep = (time: number) => {
+      const delta = time - lastTime;
+      lastTime = time;
+      
+      if (scrollContainerRef.current) {
+        // autoScrollSpeed 1 = 20px/s, 2 = 40px/s, 3 = 60px/s
+        const pixelsToScroll = (autoScrollSpeed * 20 * delta) / 1000;
+        scrollContainerRef.current.scrollBy({ top: pixelsToScroll });
+      }
+      animationFrameId = requestAnimationFrame(scrollStep);
+    };
+
+    animationFrameId = requestAnimationFrame(scrollStep);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [autoScrollSpeed]);
+
+  // Volume button scroll logic
+  useEffect(() => {
+    if (!volumeScroll) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown') {
+        e.preventDefault();
+        
+        if (!scrollContainerRef.current) return;
+        
+        const scrollAmount = window.innerHeight * 0.8;
+        
+        if (e.key === 'AudioVolumeUp') {
+          // Volume up scrolls downward
+          scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+        } else if (e.key === 'AudioVolumeDown') {
+          // Volume down scrolls upward
+          scrollContainerRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [volumeScroll]);
+
   const handleVisible = (pageNumber: number) => {
     setCurrentPage(pageNumber);
   };
@@ -254,24 +305,64 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="absolute top-20 right-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm" onClick={e => e.stopPropagation()}>
-          <h3 className="font-medium text-zinc-100 mb-3">Reader Settings</h3>
-          <div className="flex flex-col gap-2">
-            <label className="text-zinc-400 mb-1">Auto-advance to next PDF</label>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setAutoAdvanceDelay(0)}
-                className={clsx("px-3 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-              >Off</button>
-              <button 
-                onClick={() => setAutoAdvanceDelay(1500)}
-                className={clsx("px-3 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 1500 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-              >1.5s</button>
-              <button 
-                onClick={() => setAutoAdvanceDelay(5000)}
-                className={clsx("px-3 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 5000 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-              >5s</button>
+        <div className="absolute top-20 right-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm w-72" onClick={e => e.stopPropagation()}>
+          <h3 className="font-medium text-zinc-100 mb-4">Reader Settings</h3>
+          <div className="flex flex-col gap-4">
+            
+            <div className="flex flex-col gap-2">
+              <label className="text-zinc-400">Auto-scroll Speed</label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setAutoScrollSpeed(0)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Off</button>
+                <button 
+                  onClick={() => setAutoScrollSpeed(1)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 1 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Slow</button>
+                <button 
+                  onClick={() => setAutoScrollSpeed(2)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 2 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Med</button>
+                <button 
+                  onClick={() => setAutoScrollSpeed(3)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 3 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Fast</button>
+              </div>
             </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-zinc-400">Volume Button Scroll</label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setVolumeScroll(false)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", !volumeScroll ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Off</button>
+                <button 
+                  onClick={() => setVolumeScroll(true)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", volumeScroll ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >On</button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-zinc-400">Auto-advance to next PDF</label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setAutoAdvanceDelay(0)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Off</button>
+                <button 
+                  onClick={() => setAutoAdvanceDelay(1500)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 1500 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >1.5s</button>
+                <button 
+                  onClick={() => setAutoAdvanceDelay(5000)}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoAdvanceDelay === 5000 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >5s</button>
+              </div>
+            </div>
+            
           </div>
         </div>
       )}
