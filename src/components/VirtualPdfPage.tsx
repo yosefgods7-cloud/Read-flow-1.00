@@ -36,6 +36,7 @@ export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber,
 
   return (
     <div
+      id={`page-${pageNumber}`}
       ref={containerRef}
       className="w-full flex justify-center mb-4"
       style={{ minHeight: actualHeight || defaultHeight }}

@@ -13,6 +13,7 @@ export interface PdfDocument {
   priority: boolean;
   addedAt: number;
   thumbnail?: string;
+  bookmarks?: number[];
 }
 
 interface ReadFlowDB extends DBSchema {
@@ -65,6 +66,7 @@ export async function addPdf(file: File) {
     priority: false,
     addedAt: Date.now(),
     thumbnail,
+    bookmarks: [],
   };
   await db.put('pdfs', doc);
   return doc;

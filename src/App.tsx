@@ -10,8 +10,13 @@ export default function App() {
   const [currentPdfId, setCurrentPdfId] = useState<string | null>(null);
 
   const loadPdfs = async () => {
-    const all = await getAllPdfs();
-    setPdfs(all);
+    try {
+      const all = await getAllPdfs();
+      setPdfs(all);
+    } catch (error) {
+      console.error('Failed to load PDFs from IndexedDB:', error);
+      setPdfs([]);
+    }
   };
 
   useEffect(() => {

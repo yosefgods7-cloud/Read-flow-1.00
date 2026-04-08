@@ -11,8 +11,13 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const p = localStorage.getItem('readflow_password');
-    setStoredPassword(p);
+    try {
+      const p = localStorage.getItem('readflow_password');
+      setStoredPassword(p);
+    } catch (err) {
+      console.error('localStorage access denied:', err);
+      setStoredPassword(null);
+    }
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -22,7 +27,11 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onUnlock }) => {
         setError('Password must be at least 4 characters');
         return;
       }
-      localStorage.setItem('readflow_password', password);
+      try {
+        localStorage.setItem('readflow_password', password);
+      } catch (err) {
+        console.error('localStorage access denied:', err);
+      }
       onUnlock();
     } else {
       if (password === storedPassword) {

@@ -3,7 +3,7 @@ import { useIntersection, useLocalStorage } from 'react-use';
 import { usePdf } from '../lib/usePdf';
 import { VirtualPdfPage } from './VirtualPdfPage';
 import { PdfDocument, updatePdf, getPdf } from '../lib/db';
-import { ArrowLeft, Maximize, Minimize, Settings } from 'lucide-react';
+import { ArrowLeft, Maximize, Minimize, Settings, Bookmark, BookmarkCheck, List } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ReaderViewProps {
@@ -19,6 +19,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showUi, setShowUi] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showBookmarks, setShowBookmarks] = useState(false);
+  const [bookmarks, setBookmarks] = useState<number[]>(currentPdf.bookmarks || []);
   const [autoAdvanceDelay, setAutoAdvanceDelay] = useLocalStorage<number>('readflow-auto-advance', 1500);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
@@ -120,10 +122,37 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       updatePdf(currentPdf.id, { 
         lastPage: currentPage, 
         progress: currentProgress,
-        status: status === 'completed' ? 'completed' : currentPdf.status === 'to-read' ? 'reading' : currentPdf.status
+        status: status === 'completed' ? 'completed' : currentPdf.status === 'to-read' ? 'reading' : currentPdf.status,
+        bookmarks
       });
     }
-  }, [currentPage, numPages, currentPdf.id, currentPdf.status]);
+  }, [currentPage, numPages, currentPdf.id, currentPdf.status, bookmarks]);
+
+  const toggleBookmark = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setBookmarks(prev => {
+      const newBookmarks = prev.includes(currentPage) 
+        ? prev.filter(p => p !== currentPage)
+        : [...prev, currentPage].sort((a, b) => a - b);
+      return newBookmarks;
+    });
+  };
+
+  const scrollToPage = (page: number) => {
+    const el = document.getElementById(`page-${page}`);
+    if (el && scrollContainerRef.current) {
+      // Calculate position relative to scroll container
+      const containerTop = scrollContainerRef.current.getBoundingClientRect().top;
+      const elTop = el.getBoundingClientRect().top;
+      const currentScroll = scrollContainerRef.current.scrollTop;
+      
+      scrollContainerRef.current.scrollTo({
+        top: currentScroll + elTop - containerTop,
+        behavior: 'smooth'
+      });
+      setShowBookmarks(false);
+    }
+  };
 
   // Auto open next
   useEffect(() => {
@@ -155,7 +184,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
     } else {
       // Center tap -> toggle UI
-      setShowUi(prev => !prev);
+      setShowUi(prev => {
+        if (prev) {
+          setShowSettings(false);
+          setShowBookmarks(false);
+        }
+        return !prev;
+      });
     }
   };
 
@@ -175,13 +210,47 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
         </button>
         <div className="ml-4 truncate flex-1 font-medium">{currentPdf.name}</div>
         <div className="text-sm font-mono mr-4">{currentPage} / {numPages || '?'}</div>
-        <button onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); }} className="p-2 rounded-full bg-black/50 hover:bg-black/80 mr-2">
+        
+        <button onClick={toggleBookmark} className={clsx("p-2 rounded-full mr-2 transition-colors", bookmarks.includes(currentPage) ? "bg-blue-500/80 hover:bg-blue-500" : "bg-black/50 hover:bg-black/80")}>
+          {bookmarks.includes(currentPage) ? <BookmarkCheck size={24} /> : <Bookmark size={24} />}
+        </button>
+        
+        <button onClick={(e) => { e.stopPropagation(); setShowBookmarks(!showBookmarks); setShowSettings(false); }} className="p-2 rounded-full bg-black/50 hover:bg-black/80 mr-2">
+          <List size={24} />
+        </button>
+
+        <button onClick={(e) => { e.stopPropagation(); setShowSettings(!showSettings); setShowBookmarks(false); }} className="p-2 rounded-full bg-black/50 hover:bg-black/80 mr-2">
           <Settings size={24} />
         </button>
         <button onClick={toggleFullscreen} className="p-2 rounded-full bg-black/50 hover:bg-black/80">
           {isFullscreen ? <Minimize size={24} /> : <Maximize size={24} />}
         </button>
       </div>
+
+      {/* Bookmarks Panel */}
+      {showBookmarks && (
+        <div className="absolute top-20 right-16 w-64 max-h-96 overflow-y-auto bg-zinc-900 border border-zinc-800 rounded-xl p-4 shadow-2xl z-50 text-sm" onClick={e => e.stopPropagation()}>
+          <h3 className="font-medium text-zinc-100 mb-3 flex items-center gap-2">
+            <Bookmark size={16} /> Bookmarks
+          </h3>
+          {bookmarks.length === 0 ? (
+            <p className="text-zinc-500 italic">No bookmarks yet.</p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {bookmarks.map(page => (
+                <button
+                  key={page}
+                  onClick={() => scrollToPage(page)}
+                  className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-zinc-800 text-left transition-colors"
+                >
+                  <span className="text-zinc-300">Page {page}</span>
+                  {currentPage === page && <span className="w-2 h-2 rounded-full bg-blue-500"></span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Settings Panel */}
       {showSettings && (

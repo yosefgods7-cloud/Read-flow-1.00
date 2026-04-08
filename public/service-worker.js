@@ -1,4 +1,4 @@
-const CACHE_NAME = 'readflow-cache-v1';
+const CACHE_NAME = 'readflow-cache-v2';
 const urlsToCache = [
   './',
   './index.html',
@@ -6,27 +6,26 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         return cache.addAll(urlsToCache);
-      })
+      }).catch(err => console.error('SW cache error', err))
   );
 });
 
 self.addEventListener('fetch', event => {
+  // Use network-first strategy to prevent stale blank screens
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
   );
 });
 
 self.addEventListener('activate', event => {
+  event.waitUntil(clients.claim());
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
