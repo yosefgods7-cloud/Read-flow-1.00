@@ -3,7 +3,7 @@ import { useIntersection, useLocalStorage } from 'react-use';
 import { usePdf } from '../lib/usePdf';
 import { VirtualPdfPage } from './VirtualPdfPage';
 import { PdfDocument, updatePdf, getPdf } from '../lib/db';
-import { ArrowLeft, Maximize, Minimize, Settings, Bookmark, BookmarkCheck, List } from 'lucide-react';
+import { ArrowLeft, Maximize, Minimize, Settings, Bookmark, BookmarkCheck, List, Volume2, Pause, Play, Square } from 'lucide-react';
 import clsx from 'clsx';
 
 interface ReaderViewProps {
@@ -26,6 +26,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [volumeScroll, setVolumeScroll] = useLocalStorage<boolean>('readflow-volume-scroll', false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const isReadingRef = useRef(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const [currentBlob, setCurrentBlob] = useState<Blob | undefined>();
   const [nextBlob, setNextBlob] = useState<Blob | undefined>();
@@ -79,6 +84,89 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const { pdf, error, loadProgress } = usePdf(currentBlob);
   const { pdf: nextPdf } = usePdf(nextBlob);
   const { pdf: prevPdf } = usePdf(prevBlob);
+
+  // TTS Logic
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      isReadingRef.current = false;
+    };
+  }, []);
+
+  const extractPageText = async (pageNum: number) => {
+    if (!pdf) return '';
+    try {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      return textContent.items.map((item: any) => item.str).join(' ');
+    } catch (e) {
+      console.error(e);
+      return '';
+    }
+  };
+
+  const stopSpeaking = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeaking(false);
+    setIsPaused(false);
+    isReadingRef.current = false;
+  };
+
+  const startSpeaking = async (startPage = currentPage) => {
+    if (!pdf) return;
+    isReadingRef.current = true;
+    setIsSpeaking(true);
+    setIsPaused(false);
+    
+    const readNext = async (pageNum: number) => {
+      if (!isReadingRef.current || pageNum > numPages) {
+        stopSpeaking();
+        return;
+      }
+      
+      scrollToPage(pageNum);
+      
+      const text = await extractPageText(pageNum);
+      if (!text.trim()) {
+        readNext(pageNum + 1);
+        return;
+      }
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance;
+      
+      utterance.onend = () => {
+        if (isReadingRef.current) {
+          readNext(pageNum + 1);
+        }
+      };
+      
+      utterance.onerror = (e) => {
+        console.error("Speech synthesis error", e);
+        stopSpeaking();
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    };
+    
+    window.speechSynthesis.cancel();
+    readNext(startPage);
+  };
+
+  const togglePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSpeaking) {
+      if (isPaused) {
+        window.speechSynthesis.resume();
+        setIsPaused(false);
+      } else {
+        window.speechSynthesis.pause();
+        setIsPaused(true);
+      }
+    } else {
+      startSpeaking(currentPage);
+    }
+  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -263,6 +351,23 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
         <div className="text-xs sm:text-sm font-mono mr-2 sm:mr-4 shrink-0">{currentPage} / {numPages || '?'}</div>
         
         <div className="flex items-center shrink-0">
+          <div className="flex items-center bg-black/50 rounded-full p-0.5 sm:p-1 mr-1 sm:mr-2">
+            {isSpeaking ? (
+              <>
+                <button onClick={togglePlayPause} className="p-1.5 sm:p-2 rounded-full hover:bg-black/80 transition-colors" title={isPaused ? "Resume Reading" : "Pause Reading"}>
+                  {isPaused ? <Play className="w-4 h-4 sm:w-5 sm:h-5" /> : <Pause className="w-4 h-4 sm:w-5 sm:h-5" />}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); stopSpeaking(); }} className="p-1.5 sm:p-2 rounded-full hover:bg-black/80 transition-colors text-red-400" title="Stop Reading">
+                  <Square className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </>
+            ) : (
+              <button onClick={(e) => { e.stopPropagation(); startSpeaking(currentPage); }} className="p-1.5 sm:p-2 rounded-full hover:bg-black/80 transition-colors" title="Read Aloud">
+                <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+            )}
+          </div>
+
           <button onClick={toggleBookmark} className={clsx("p-1.5 sm:p-2 rounded-full mr-1 sm:mr-2 transition-colors", bookmarks.includes(currentPage) ? "bg-blue-500/80 hover:bg-blue-500" : "bg-black/50 hover:bg-black/80")}>
             {bookmarks.includes(currentPage) ? <BookmarkCheck className="w-5 h-5 sm:w-6 sm:h-6" /> : <Bookmark className="w-5 h-5 sm:w-6 sm:h-6" />}
           </button>
