@@ -561,6 +561,23 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
           </div>
         )}
       </div>
+
+      {/* Progress Bar (Bottom) */}
+      <div className={clsx(
+        "absolute bottom-0 left-0 right-0 z-40 transition-transform duration-300 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800",
+        showUi ? "translate-y-0" : "translate-y-full"
+      )}>
+        <div className="h-1 w-full bg-zinc-800">
+          <div 
+            className="h-full bg-blue-500 transition-all duration-300 ease-out" 
+            style={{ width: `${numPages > 0 ? (currentPage / numPages) * 100 : 0}%` }} 
+          />
+        </div>
+        <div className="px-4 py-2 flex justify-between items-center text-xs text-zinc-400 font-medium">
+          <span>{Math.round(numPages > 0 ? (currentPage / numPages) * 100 : 0)}%</span>
+          <span>Page {currentPage} of {numPages || '?'}</span>
+        </div>
+      </div>
     </div>
   );
 };
