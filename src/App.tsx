@@ -22,6 +22,12 @@ export default function App() {
   useEffect(() => {
     if (!isLocked) {
       loadPdfs();
+      
+      const handleThumbnailGenerated = () => {
+        loadPdfs();
+      };
+      window.addEventListener('pdf-thumbnail-generated', handleThumbnailGenerated);
+      return () => window.removeEventListener('pdf-thumbnail-generated', handleThumbnailGenerated);
     }
   }, [isLocked]);
 

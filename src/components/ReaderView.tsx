@@ -33,13 +33,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const [currentBlob, setCurrentBlob] = useState<Blob | undefined>();
-  const [nextBlob, setNextBlob] = useState<Blob | undefined>();
-  const [prevBlob, setPrevBlob] = useState<Blob | undefined>();
-
-  // Preload next PDF logic
-  const currentIndex = allPdfs.findIndex(p => p.id === currentPdf.id);
-  const nextPdfDoc = currentIndex < allPdfs.length - 1 ? allPdfs[currentIndex + 1] : null;
-  const prevPdfDoc = currentIndex > 0 ? allPdfs[currentIndex - 1] : null;
 
   // Load current blob
   useEffect(() => {
@@ -51,39 +44,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     return () => { isMounted = false; };
   }, [currentPdf.id]);
 
-  // Load prev blob
-  useEffect(() => {
-    let isMounted = true;
-    setPrevBlob(undefined);
-    if (prevPdfDoc) {
-      getPdf(prevPdfDoc.id).then(doc => {
-        if (isMounted && doc?.blob) setPrevBlob(doc.blob);
-      });
-    }
-    return () => { isMounted = false; };
-  }, [prevPdfDoc?.id]);
-
-  // Load next blob
-  const progress = numPages > 0 ? currentPage / numPages : 0;
-  const shouldPreloadNext = progress > 0.7 && nextPdfDoc;
-
-  useEffect(() => {
-    setNextBlob(undefined);
-  }, [nextPdfDoc?.id]);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (shouldPreloadNext && nextPdfDoc && !nextBlob) {
-      getPdf(nextPdfDoc.id).then(doc => {
-        if (isMounted && doc?.blob) setNextBlob(doc.blob);
-      });
-    }
-    return () => { isMounted = false; };
-  }, [shouldPreloadNext, nextPdfDoc?.id, nextBlob]);
-
   const { pdf, error, loadProgress } = usePdf(currentBlob);
-  const { pdf: nextPdf } = usePdf(nextBlob);
-  const { pdf: prevPdf } = usePdf(prevBlob);
 
   // TTS Logic
   useEffect(() => {
@@ -246,13 +207,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
   // Auto open next
   useEffect(() => {
+    const currentIndex = allPdfs.findIndex(p => p.id === currentPdf.id);
+    const nextPdfDoc = currentIndex < allPdfs.length - 1 ? allPdfs[currentIndex + 1] : null;
+    
     if (endIntersection?.isIntersecting && nextPdfDoc && autoAdvanceDelay && autoAdvanceDelay > 0) {
       const timer = setTimeout(() => {
         onNextPdf(nextPdfDoc.id);
       }, autoAdvanceDelay);
       return () => clearTimeout(timer);
     }
-  }, [endIntersection?.isIntersecting, nextPdfDoc, onNextPdf, autoAdvanceDelay]);
+  }, [endIntersection?.isIntersecting, currentPdf.id, allPdfs, onNextPdf, autoAdvanceDelay]);
 
   // Auto-scroll logic
   useEffect(() => {
