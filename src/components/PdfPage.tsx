@@ -5,10 +5,11 @@ interface PdfPageProps {
   pdf: pdfjsLib.PDFDocumentProxy;
   pageNumber: number;
   scale?: number;
+  readingMode?: 'standard' | 'manga';
   onPageRendered?: (pageNumber: number, width: number, height: number) => void;
 }
 
-export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, onPageRendered }) => {
+export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, readingMode = 'standard', onPageRendered }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [renderTask, setRenderTask] = useState<pdfjsLib.RenderTask | null>(null);
 
@@ -66,7 +67,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
   return (
     <canvas
       ref={canvasRef}
-      className="max-w-full h-auto mx-auto bg-white shadow-md"
+      className={`max-w-full h-auto mx-auto bg-white ${readingMode === 'manga' ? 'w-full object-contain' : 'shadow-md'}`}
       style={{ display: 'block' }}
     />
   );

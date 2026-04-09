@@ -24,6 +24,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [autoAdvanceDelay, setAutoAdvanceDelay] = useLocalStorage<number>('readflow-auto-advance', 1500);
   const [autoScrollSpeed, setAutoScrollSpeed] = useLocalStorage<number>('readflow-auto-scroll', 0);
   const [volumeScroll, setVolumeScroll] = useLocalStorage<boolean>('readflow-volume-scroll', false);
+  const [speechRate, setSpeechRate] = useLocalStorage<number>('readflow-speech-rate', 1.0);
+  const [readingMode, setReadingMode] = useLocalStorage<'standard' | 'manga'>('readflow-reading-mode', 'standard');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
 
@@ -128,6 +130,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       }
       
       const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = speechRate || 1.0;
       utteranceRef.current = utterance;
       
       utterance.onend = () => {
@@ -412,6 +415,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
           <div className="flex flex-col gap-4">
             
             <div className="flex flex-col gap-2">
+              <label className="text-zinc-400">Reading Mode</label>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setReadingMode('standard')}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", readingMode === 'standard' ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Standard</button>
+                <button 
+                  onClick={() => setReadingMode('manga')}
+                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", readingMode === 'manga' ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Manga / Webtoon</button>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-zinc-400 flex justify-between">
+                <span>Speech Rate (TTS)</span>
+                <span className="text-zinc-500">{speechRate?.toFixed(1)}x</span>
+              </label>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="2.5" 
+                step="0.1" 
+                value={speechRate || 1.0}
+                onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                className="w-full accent-blue-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
               <label className="text-zinc-400">Auto-scroll Speed</label>
               <div className="flex gap-2">
                 <button 
@@ -498,13 +531,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
             </div>
           </div>
         ) : (
-          <div className="py-8 max-w-4xl mx-auto flex flex-col items-center">
+          <div className={clsx("mx-auto flex flex-col items-center", readingMode === 'manga' ? "w-full max-w-3xl" : "py-8 max-w-4xl")}>
             {Array.from({ length: numPages }, (_, i) => (
               <VirtualPdfPage
                 key={i + 1}
                 pdf={pdf}
                 pageNumber={i + 1}
                 defaultHeight={window.innerHeight}
+                readingMode={readingMode || 'standard'}
                 onVisible={handleVisible}
               />
             ))}

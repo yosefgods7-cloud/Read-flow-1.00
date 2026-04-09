@@ -7,10 +7,11 @@ interface VirtualPdfPageProps {
   pdf: pdfjsLib.PDFDocumentProxy;
   pageNumber: number;
   defaultHeight: number;
+  readingMode?: 'standard' | 'manga';
   onVisible: (pageNumber: number) => void;
 }
 
-export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber, defaultHeight, onVisible }) => {
+export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber, defaultHeight, readingMode = 'standard', onVisible }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const intersection = useIntersection(containerRef, {
     root: null,
@@ -38,14 +39,15 @@ export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber,
     <div
       id={`page-${pageNumber}`}
       ref={containerRef}
-      className="w-full flex justify-center mb-4"
+      className={`w-full flex justify-center ${readingMode === 'manga' ? '' : 'mb-4'}`}
       style={{ minHeight: actualHeight || defaultHeight }}
     >
       {isVisible ? (
         <PdfPage
           pdf={pdf}
           pageNumber={pageNumber}
-          scale={window.innerWidth < 768 ? 1.2 : 2.0}
+          scale={readingMode === 'manga' ? (window.innerWidth < 768 ? 1.5 : 2.5) : (window.innerWidth < 768 ? 1.2 : 2.0)}
+          readingMode={readingMode}
           onPageRendered={(_, __, height) => setActualHeight(height)}
         />
       ) : (
