@@ -34,6 +34,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
   const [currentBlob, setCurrentBlob] = useState<Blob | undefined>();
 
+  const currentIndex = allPdfs.findIndex(p => p.id === currentPdf.id);
+  const nextPdfDoc = currentIndex < allPdfs.length - 1 ? allPdfs[currentIndex + 1] : null;
+
   // Load current blob
   useEffect(() => {
     let isMounted = true;
@@ -59,7 +62,38 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     try {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
-      return textContent.items.map((item: any) => item.str).join(' ');
+      
+      let text = '';
+      let lastY = -1;
+
+      for (const item of textContent.items) {
+        if (!('str' in item)) continue;
+        
+        const currentY = item.transform[5];
+        
+        // Detect new line based on Y coordinate change
+        if (lastY !== -1 && Math.abs(currentY - lastY) > 5) {
+          text += '\n';
+        } else if (lastY !== -1 && !text.endsWith(' ') && !text.endsWith('\n')) {
+          // Add space between items on the same line to prevent words merging
+          text += ' ';
+        }
+        
+        text += item.str;
+        lastY = currentY;
+      }
+
+      // Post-processing for natural TTS reading
+      return text
+        // 1. Fix hyphenated words broken across lines (e.g., "ex-\ntract" -> "extract")
+        .replace(/-\s*\n\s*/g, '')
+        // 2. Replace remaining newlines with spaces to avoid awkward pauses
+        .replace(/\n/g, ' ')
+        // 3. Remove multiple consecutive spaces
+        .replace(/\s+/g, ' ')
+        // 4. Clean up invisible control characters
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, '')
+        .trim();
     } catch (e) {
       console.error(e);
       return '';
@@ -207,16 +241,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
   // Auto open next
   useEffect(() => {
-    const currentIndex = allPdfs.findIndex(p => p.id === currentPdf.id);
-    const nextPdfDoc = currentIndex < allPdfs.length - 1 ? allPdfs[currentIndex + 1] : null;
-    
     if (endIntersection?.isIntersecting && nextPdfDoc && autoAdvanceDelay && autoAdvanceDelay > 0) {
       const timer = setTimeout(() => {
         onNextPdf(nextPdfDoc.id);
       }, autoAdvanceDelay);
       return () => clearTimeout(timer);
     }
-  }, [endIntersection?.isIntersecting, currentPdf.id, allPdfs, onNextPdf, autoAdvanceDelay]);
+  }, [endIntersection?.isIntersecting, currentPdf.id, allPdfs, onNextPdf, autoAdvanceDelay, nextPdfDoc]);
 
   // Auto-scroll logic
   useEffect(() => {
