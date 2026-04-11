@@ -13,7 +13,7 @@ interface VirtualPdfPageProps {
 
 export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMode = 'standard', onVisible }: VirtualPdfPageProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [actualHeight, setActualHeight] = useState<number | null>(null);
+  const [aspectRatio, setAspectRatio] = useState<number | null>(null);
 
   // Track visibility for reading progress
   const strictIntersection = useIntersection(containerRef, {
@@ -33,14 +33,16 @@ export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMod
       id={`page-${pageNumber}`}
       ref={containerRef}
       className={`w-full flex justify-center ${readingMode === 'manga' ? '' : 'mb-4'}`}
-      style={{ minHeight: actualHeight || defaultHeight }}
+      style={{ 
+        minHeight: aspectRatio ? undefined : defaultHeight,
+      }}
     >
       <PdfPage
         pdf={pdf}
         pageNumber={pageNumber}
         scale={readingMode === 'manga' ? (window.innerWidth < 768 ? 1.5 : 2.5) : (window.innerWidth < 768 ? 1.2 : 2.0)}
         readingMode={readingMode}
-        onPageRendered={(_, __, height) => setActualHeight(height)}
+        onPageRendered={(_, width, height) => setAspectRatio(width / height)}
       />
     </div>
   );

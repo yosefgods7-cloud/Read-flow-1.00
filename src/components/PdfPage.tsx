@@ -24,7 +24,21 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
         currentPageObj = page;
         if (!isMounted) return;
 
-        const viewport = page.getViewport({ scale });
+        const baseViewport = page.getViewport({ scale: 1.0 });
+        
+        // Calculate scale to fit within hardware limits (e.g., 4000px max dimension for mobile safety)
+        const MAX_DIMENSION = 4000;
+        let finalScale = scale;
+        
+        if (baseViewport.height * finalScale > MAX_DIMENSION || baseViewport.width * finalScale > MAX_DIMENSION) {
+          const scaleFactor = Math.min(
+            MAX_DIMENSION / baseViewport.height,
+            MAX_DIMENSION / baseViewport.width
+          );
+          finalScale = scaleFactor;
+        }
+
+        const viewport = page.getViewport({ scale: finalScale });
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -35,7 +49,8 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
         canvas.width = viewport.width;
 
         if (onPageRendered) {
-          onPageRendered(pageNumber, viewport.width, viewport.height);
+          // Pass the original unscaled dimensions for accurate aspect ratio
+          onPageRendered(pageNumber, baseViewport.width, baseViewport.height);
         }
 
         const renderContext = {

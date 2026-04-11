@@ -485,32 +485,24 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-zinc-400">Auto-scroll Speed</label>
-              <div className="flex flex-wrap gap-2">
-                <button 
-                  onClick={() => setAutoScrollSpeed(0)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Off</button>
-                <button 
-                  onClick={() => setAutoScrollSpeed(1)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 1 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Slow</button>
-                <button 
-                  onClick={() => setAutoScrollSpeed(2)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 2 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Med</button>
-                <button 
-                  onClick={() => setAutoScrollSpeed(3)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 3 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Fast</button>
-                <button 
-                  onClick={() => setAutoScrollSpeed(8)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm font-medium", autoScrollSpeed === 8 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Manga Fast</button>
-                <button 
-                  onClick={() => setAutoScrollSpeed(15)}
-                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm font-medium", autoScrollSpeed === 15 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
-                >Manga Ultra</button>
+              <label className="text-zinc-400 flex justify-between">
+                <span>Auto-scroll Speed</span>
+                <span className="text-zinc-500">{autoScrollSpeed === 0 ? 'Off' : `${autoScrollSpeed}x`}</span>
+              </label>
+              <input 
+                type="range" 
+                min="0" 
+                max="50" 
+                step="1" 
+                value={autoScrollSpeed || 0}
+                onChange={(e) => setAutoScrollSpeed(parseInt(e.target.value))}
+                className="w-full accent-blue-500"
+              />
+              <div className="flex justify-between text-xs text-zinc-600 mt-1">
+                <span>Off</span>
+                <span>Standard</span>
+                <span>Manga Fast</span>
+                <span>Ultra</span>
               </div>
             </div>
 
