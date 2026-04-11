@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useIntersection, useLocalStorage } from 'react-use';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
+import { VolumeButtons } from '@capacitor-community/volume-buttons';
+import { Capacitor } from '@capacitor/core';
 import { usePdf } from '../lib/usePdf';
 import { VirtualPdfPage } from './VirtualPdfPage';
 import { PdfDocument, updatePdf, getPdf } from '../lib/db';
@@ -27,7 +29,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [volumeScroll, setVolumeScroll] = useLocalStorage<boolean>('readflow-volume-scroll', false);
   const [speechRate, setSpeechRate] = useLocalStorage<number>('readflow-speech-rate', 1.0);
   const [readingMode, setReadingMode] = useLocalStorage<'standard' | 'manga'>('readflow-reading-mode', 'standard');
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
 
@@ -270,50 +272,74 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       const delta = time - lastTime;
       lastTime = time;
       
-      if (scrollContainerRef.current) {
+      if (scrollElement) {
         // autoScrollSpeed 1 = 20px/s, 2 = 40px/s, 3 = 60px/s
         const pixelsToScroll = (autoScrollSpeed * 20 * delta) / 1000;
-        scrollContainerRef.current.scrollBy({ top: pixelsToScroll });
+        scrollElement.scrollBy({ top: pixelsToScroll });
       }
       animationFrameId = requestAnimationFrame(scrollStep);
     };
 
     animationFrameId = requestAnimationFrame(scrollStep);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [autoScrollSpeed]);
+  }, [autoScrollSpeed, scrollElement]);
 
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.focus();
+    if (scrollElement) {
+      scrollElement.focus();
     }
-  }, []);
+  }, [scrollElement]);
 
   // Volume button scroll logic
   useEffect(() => {
     if (!volumeScroll) return;
 
+    let volumeUpListener: any;
+    let volumeDownListener: any;
+
+    const setupNativeVolumeButtons = async () => {
+      if (Capacitor.isNativePlatform()) {
+        volumeUpListener = await VolumeButtons.addListener('volumeup', () => {
+          if (scrollElement) {
+            scrollElement.scrollBy({ top: -(window.innerHeight * 0.8), behavior: 'smooth' });
+          }
+        });
+        volumeDownListener = await VolumeButtons.addListener('volumedown', () => {
+          if (scrollElement) {
+            scrollElement.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
+          }
+        });
+      }
+    };
+
+    setupNativeVolumeButtons();
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Catch standard volume keys and common keycodes for volume buttons
+      // Catch standard volume keys and common keycodes for volume buttons (fallback for web/some devices)
       if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown' || e.key === 'VolumeUp' || e.key === 'VolumeDown' || e.keyCode === 24 || e.keyCode === 25) {
         e.preventDefault();
         
-        if (!scrollContainerRef.current) return;
+        if (!scrollElement) return;
         
         const scrollAmount = window.innerHeight * 0.8;
         
         if (e.key === 'AudioVolumeUp' || e.key === 'VolumeUp' || e.keyCode === 24) {
           // Volume up scrolls upward
-          scrollContainerRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+          scrollElement.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
         } else if (e.key === 'AudioVolumeDown' || e.key === 'VolumeDown' || e.keyCode === 25) {
           // Volume down scrolls downward
-          scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+          scrollElement.scrollBy({ top: scrollAmount, behavior: 'smooth' });
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown, { passive: false });
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [volumeScroll]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (volumeUpListener) volumeUpListener.remove();
+      if (volumeDownListener) volumeDownListener.remove();
+    };
+  }, [volumeScroll, scrollElement]);
 
   const handleVisible = React.useCallback((pageNumber: number) => {
     setCurrentPage(pageNumber);
@@ -323,16 +349,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
     const width = window.innerWidth;
     
-    if (!scrollContainerRef.current) return;
+    if (!scrollElement) return;
 
     const scrollAmount = window.innerHeight * 0.8;
 
     if (clientX > width * 0.6) {
-      // Tap right -> scroll up
-      scrollContainerRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+      // Tap right -> scroll down (typically right side goes forward/down)
+      scrollElement.scrollBy({ top: scrollAmount, behavior: 'smooth' });
     } else if (clientX < width * 0.4) {
-      // Tap left -> scroll down
-      scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+      // Tap left -> scroll up (typically left side goes backward/up)
+      scrollElement.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
     } else {
       // Center tap -> toggle UI
       setShowUi(prev => {
@@ -526,7 +552,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
       {/* Scroll Container */}
       <div 
-        ref={scrollContainerRef}
+        ref={setScrollElement}
         tabIndex={-1}
         className="flex-1 overflow-y-auto overflow-x-hidden outline-none"
         onClick={handleTap}
@@ -555,13 +581,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
           </div>
         ) : (
           <div className={clsx("mx-auto flex flex-col h-full", readingMode === 'manga' ? "w-full" : "py-8 max-w-4xl px-4")}>
-            <Virtuoso
-              ref={virtuosoRef}
-              useWindowScroll={false}
-              customScrollParent={scrollContainerRef.current as HTMLElement}
-              totalCount={numPages}
-              overscan={window.innerHeight * 3}
-              itemContent={(index) => (
+            {scrollElement && (
+              <Virtuoso
+                ref={virtuosoRef}
+                useWindowScroll={false}
+                customScrollParent={scrollElement}
+                totalCount={numPages}
+                overscan={window.innerHeight * 3}
+                itemContent={(index) => (
                 <VirtualPdfPage
                   key={index + 1}
                   pdf={pdf}
@@ -590,6 +617,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                 )
               }}
             />
+            )}
           </div>
         )}
       </div>

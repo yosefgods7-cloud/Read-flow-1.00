@@ -60,6 +60,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
     }
   };
 
+  const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
+  const [renameModalPdf, setRenameModalPdf] = useState<PdfDocument | null>(null);
+  const [renameInput, setRenameInput] = useState('');
+
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -74,7 +78,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
       onRefresh();
     } catch (err) {
       console.error('Error importing PDFs:', err);
-      alert('Failed to import one or more PDFs. They might be too large or corrupted.');
+      // alert('Failed to import one or more PDFs. They might be too large or corrupted.');
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -82,16 +86,26 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this PDF?')) {
-      await deletePdf(id);
+    setDeleteModalId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteModalId) {
+      await deletePdf(deleteModalId);
+      setDeleteModalId(null);
       onRefresh();
     }
   };
 
   const handleRename = async (pdf: PdfDocument) => {
-    const newName = prompt('Enter new name:', pdf.name);
-    if (newName && newName.trim() !== '') {
-      await updatePdf(pdf.id, { name: newName.trim() });
+    setRenameModalPdf(pdf);
+    setRenameInput(pdf.name);
+  };
+
+  const confirmRename = async () => {
+    if (renameModalPdf && renameInput.trim() !== '') {
+      await updatePdf(renameModalPdf.id, { name: renameInput.trim() });
+      setRenameModalPdf(null);
       onRefresh();
     }
   };
@@ -371,6 +385,64 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
           />
         )}
       </div>
+
+      {/* Delete Modal */}
+      {deleteModalId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-medium text-zinc-100 mb-2">Delete PDF?</h3>
+            <p className="text-zinc-400 text-sm mb-6">Are you sure you want to delete this PDF? This action cannot be undone.</p>
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setDeleteModalId(null)}
+                className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-zinc-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameModalPdf && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="text-lg font-medium text-zinc-100 mb-4">Rename PDF</h3>
+            <input
+              type="text"
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-zinc-100 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 mb-6"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') confirmRename();
+                if (e.key === 'Escape') setRenameModalPdf(null);
+              }}
+            />
+            <div className="flex gap-3 justify-end">
+              <button 
+                onClick={() => setRenameModalPdf(null)}
+                className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-zinc-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmRename}
+                className="px-4 py-2 text-sm font-medium bg-zinc-100 text-zinc-900 hover:bg-white rounded-lg transition-colors"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
