@@ -280,19 +280,20 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     if (!volumeScroll) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown') {
+      // Catch standard volume keys and common keycodes for volume buttons
+      if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown' || e.key === 'VolumeUp' || e.key === 'VolumeDown' || e.keyCode === 24 || e.keyCode === 25) {
         e.preventDefault();
         
         if (!scrollContainerRef.current) return;
         
         const scrollAmount = window.innerHeight * 0.8;
         
-        if (e.key === 'AudioVolumeUp') {
-          // Volume up scrolls downward
-          scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
-        } else if (e.key === 'AudioVolumeDown') {
-          // Volume down scrolls upward
+        if (e.key === 'AudioVolumeUp' || e.key === 'VolumeUp' || e.keyCode === 24) {
+          // Volume up scrolls upward
           scrollContainerRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+        } else if (e.key === 'AudioVolumeDown' || e.key === 'VolumeDown' || e.keyCode === 25) {
+          // Volume down scrolls downward
+          scrollContainerRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
         }
       }
     };
@@ -446,23 +447,31 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
             <div className="flex flex-col gap-2">
               <label className="text-zinc-400">Auto-scroll Speed</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button 
                   onClick={() => setAutoScrollSpeed(0)}
-                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 0 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
                 >Off</button>
                 <button 
                   onClick={() => setAutoScrollSpeed(1)}
-                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 1 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 1 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
                 >Slow</button>
                 <button 
                   onClick={() => setAutoScrollSpeed(2)}
-                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 2 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 2 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
                 >Med</button>
                 <button 
                   onClick={() => setAutoScrollSpeed(3)}
-                  className={clsx("flex-1 py-1.5 rounded-full transition-colors", autoScrollSpeed === 3 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm", autoScrollSpeed === 3 ? "bg-zinc-100 text-zinc-900" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
                 >Fast</button>
+                <button 
+                  onClick={() => setAutoScrollSpeed(8)}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm font-medium", autoScrollSpeed === 8 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Manga Fast</button>
+                <button 
+                  onClick={() => setAutoScrollSpeed(15)}
+                  className={clsx("px-3 py-1.5 rounded-full transition-colors text-sm font-medium", autoScrollSpeed === 15 ? "bg-blue-500 text-white" : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700")}
+                >Manga Ultra</button>
               </div>
             </div>
 
@@ -531,7 +540,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
             </div>
           </div>
         ) : (
-          <div className={clsx("mx-auto flex flex-col items-center", readingMode === 'manga' ? "w-full max-w-3xl" : "py-8 max-w-4xl")}>
+          <div className={clsx("mx-auto flex flex-col items-center", readingMode === 'manga' ? "w-full" : "py-8 max-w-4xl px-4")}>
             {Array.from({ length: numPages }, (_, i) => (
               <VirtualPdfPage
                 key={i + 1}

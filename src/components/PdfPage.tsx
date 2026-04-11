@@ -58,8 +58,12 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
 
     return () => {
       isMounted = false;
-      if (currentRenderTask) {
-        currentRenderTask.cancel();
+      if (currentRenderTask && typeof currentRenderTask.cancel === 'function') {
+        try {
+          currentRenderTask.cancel();
+        } catch (e) {
+          // Ignore cancellation errors
+        }
       }
     };
   }, [pdf, pageNumber, scale]);

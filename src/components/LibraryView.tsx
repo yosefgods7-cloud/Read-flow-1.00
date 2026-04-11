@@ -343,7 +343,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-2 sm:opacity-0 group-hover:opacity-100 transition-opacity mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-zinc-800/50 sm:border-0">
+                  <div className="flex items-center gap-1 sm:gap-2 transition-opacity mt-2 sm:mt-0 pt-2 sm:pt-0 border-t border-zinc-800/50 sm:border-0">
                     <button onClick={() => onOpenPdf(pdf.id)} className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-100 bg-zinc-800 rounded-full" title="Read">
                       <Play size={16} />
                     </button>
