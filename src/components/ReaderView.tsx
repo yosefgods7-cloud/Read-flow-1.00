@@ -291,24 +291,36 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   }, [scrollElement]);
 
   // Volume button scroll logic
+  const scrollElementRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    scrollElementRef.current = scrollElement;
+  }, [scrollElement]);
+
   useEffect(() => {
     if (!volumeScroll) return;
 
-    let volumeUpListener: any;
-    let volumeDownListener: any;
+    let callbackId: any = null;
 
     const setupNativeVolumeButtons = async () => {
       if (Capacitor.isNativePlatform()) {
-        volumeUpListener = await VolumeButtons.addListener('volumeup', () => {
-          if (scrollElement) {
-            scrollElement.scrollBy({ top: -(window.innerHeight * 0.8), behavior: 'smooth' });
-          }
-        });
-        volumeDownListener = await VolumeButtons.addListener('volumedown', () => {
-          if (scrollElement) {
-            scrollElement.scrollBy({ top: window.innerHeight * 0.8, behavior: 'smooth' });
-          }
-        });
+        try {
+          callbackId = await VolumeButtons.watchVolume({ disableSystemVolumeHandler: true }, (result, err) => {
+            if (err) {
+              console.error('Volume button error:', err);
+              return;
+            }
+            if (scrollElementRef.current && result) {
+              const scrollAmount = window.innerHeight * 0.8;
+              if (result.direction === 'up') {
+                scrollElementRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+              } else if (result.direction === 'down') {
+                scrollElementRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+              }
+            }
+          });
+        } catch (e) {
+          console.error('Failed to setup volume buttons:', e);
+        }
       }
     };
 
@@ -319,16 +331,16 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       if (e.key === 'AudioVolumeUp' || e.key === 'AudioVolumeDown' || e.key === 'VolumeUp' || e.key === 'VolumeDown' || e.keyCode === 24 || e.keyCode === 25) {
         e.preventDefault();
         
-        if (!scrollElement) return;
+        if (!scrollElementRef.current) return;
         
         const scrollAmount = window.innerHeight * 0.8;
         
         if (e.key === 'AudioVolumeUp' || e.key === 'VolumeUp' || e.keyCode === 24) {
           // Volume up scrolls upward
-          scrollElement.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+          scrollElementRef.current.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
         } else if (e.key === 'AudioVolumeDown' || e.key === 'VolumeDown' || e.keyCode === 25) {
           // Volume down scrolls downward
-          scrollElement.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+          scrollElementRef.current.scrollBy({ top: scrollAmount, behavior: 'smooth' });
         }
       }
     };
@@ -336,28 +348,32 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     window.addEventListener('keydown', handleKeyDown, { passive: false });
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      if (volumeUpListener) volumeUpListener.remove();
-      if (volumeDownListener) volumeDownListener.remove();
+      if (callbackId && Capacitor.isNativePlatform()) {
+        VolumeButtons.clearWatch({ id: callbackId }).catch(console.error);
+      }
     };
-  }, [volumeScroll, scrollElement]);
+  }, [volumeScroll]);
 
   const handleVisible = React.useCallback((pageNumber: number) => {
     setCurrentPage(pageNumber);
   }, []);
 
-  const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+  const handleTap = (e: React.MouseEvent) => {
+    // Ignore clicks on buttons or interactive elements
+    if ((e.target as HTMLElement).closest('button, input, a')) return;
+
+    const clientX = e.clientX;
     const width = window.innerWidth;
     
     if (!scrollElement) return;
 
     const scrollAmount = window.innerHeight * 0.8;
 
-    if (clientX > width * 0.6) {
-      // Tap right -> scroll down (typically right side goes forward/down)
+    if (clientX > width * 0.65) {
+      // Tap right -> scroll down
       scrollElement.scrollBy({ top: scrollAmount, behavior: 'smooth' });
-    } else if (clientX < width * 0.4) {
-      // Tap left -> scroll up (typically left side goes backward/up)
+    } else if (clientX < width * 0.35) {
+      // Tap left -> scroll up
       scrollElement.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
     } else {
       // Center tap -> toggle UI

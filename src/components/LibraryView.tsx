@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 import { PdfDocument, addPdf, deletePdf, updatePdf } from '../lib/db';
-import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical, FileText, Search, X } from 'lucide-react';
+import { Upload, Trash2, Edit2, ArrowUp, ArrowDown, Star, Play, ArrowDownAZ, ArrowUpAZ, Calendar, HardDrive, ListOrdered, GripVertical, FileText, Search, X, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 
 interface LibraryViewProps {
@@ -194,7 +194,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ pdfs, onRefresh, onOpe
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 md:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">ReadFlow</h1>
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-500 p-2 rounded-xl shadow-lg shadow-blue-500/20">
+            <BookOpen className="text-white" size={24} />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">ReadFlow</h1>
+        </div>
         
         <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto sm:flex-1 sm:max-w-md sm:ml-auto">
           <div className="relative flex-1">

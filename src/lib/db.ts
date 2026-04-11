@@ -136,10 +136,29 @@ export async function addPdf(file: File) {
       await writeTx.done;
     }
   } else {
-    const writeTx = db.transaction(['pdfs', 'pdf_blobs'], 'readwrite');
-    await writeTx.objectStore('pdfs').put(doc);
-    await writeTx.objectStore('pdf_blobs').put(file, id);
-    await writeTx.done;
+    try {
+      if (navigator.storage && navigator.storage.getDirectory) {
+        const root = await navigator.storage.getDirectory();
+        const fileHandle = await root.getFileHandle(`${id}.pdf`, { create: true });
+        // @ts-ignore
+        const writable = await fileHandle.createWritable();
+        await writable.write(file);
+        await writable.close();
+        
+        doc.url = `opfs://${id}.pdf`;
+        const writeTx = db.transaction('pdfs', 'readwrite');
+        await writeTx.objectStore('pdfs').put(doc);
+        await writeTx.done;
+      } else {
+        throw new Error('OPFS not supported');
+      }
+    } catch (e) {
+      console.error("Failed to save to OPFS, falling back to IDB", e);
+      const writeTx = db.transaction(['pdfs', 'pdf_blobs'], 'readwrite');
+      await writeTx.objectStore('pdfs').put(doc);
+      await writeTx.objectStore('pdf_blobs').put(file, id);
+      await writeTx.done;
+    }
   }
   
   return doc;
@@ -175,8 +194,19 @@ export async function getPdf(id: string) {
         if (blob) doc.blob = blob;
       }
     } else {
-      const blob = await db.get('pdf_blobs', id);
-      if (blob) doc.blob = blob;
+      if (doc.url && doc.url.startsWith('opfs://')) {
+        try {
+          const root = await navigator.storage.getDirectory();
+          const fileHandle = await root.getFileHandle(`${id}.pdf`);
+          const file = await fileHandle.getFile();
+          doc.blob = file;
+        } catch (e) {
+          console.error("Failed to read from OPFS", e);
+        }
+      } else {
+        const blob = await db.get('pdf_blobs', id);
+        if (blob) doc.blob = blob;
+      }
     }
   }
   return doc;
@@ -207,6 +237,15 @@ export async function deletePdf(id: string) {
       });
     } catch (e) {
       console.error("Failed to delete from filesystem", e);
+    }
+  } else {
+    try {
+      if (navigator.storage && navigator.storage.getDirectory) {
+        const root = await navigator.storage.getDirectory();
+        await root.removeEntry(`${id}.pdf`);
+      }
+    } catch (e) {
+      console.error("Failed to delete from OPFS", e);
     }
   }
   
