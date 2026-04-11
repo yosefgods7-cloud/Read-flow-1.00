@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useIntersection, useLocalStorage } from 'react-use';
+import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 import { usePdf } from '../lib/usePdf';
 import { VirtualPdfPage } from './VirtualPdfPage';
 import { PdfDocument, updatePdf, getPdf } from '../lib/db';
@@ -27,6 +28,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const [speechRate, setSpeechRate] = useLocalStorage<number>('readflow-speech-rate', 1.0);
   const [readingMode, setReadingMode] = useLocalStorage<'standard' | 'manga'>('readflow-reading-mode', 'standard');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
   const endMarkerRef = useRef<HTMLDivElement>(null);
 
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -34,22 +36,28 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   const isReadingRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const [currentBlob, setCurrentBlob] = useState<Blob | undefined>();
+  const [currentSource, setCurrentSource] = useState<Blob | string | undefined>();
 
   const currentIndex = allPdfs.findIndex(p => p.id === currentPdf.id);
   const nextPdfDoc = currentIndex < allPdfs.length - 1 ? allPdfs[currentIndex + 1] : null;
 
-  // Load current blob
+  // Load current source
   useEffect(() => {
     let isMounted = true;
-    setCurrentBlob(undefined);
+    setCurrentSource(undefined);
     getPdf(currentPdf.id).then(doc => {
-      if (isMounted && doc?.blob) setCurrentBlob(doc.blob);
+      if (isMounted && doc) {
+        if (doc.url) {
+          setCurrentSource(doc.url);
+        } else if (doc.blob) {
+          setCurrentSource(doc.blob);
+        }
+      }
     });
     return () => { isMounted = false; };
   }, [currentPdf.id]);
 
-  const { pdf, error, loadProgress } = usePdf(currentBlob);
+  const { pdf, error, loadProgress } = usePdf(currentSource);
 
   // TTS Logic
   useEffect(() => {
@@ -193,11 +201,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     if (pdf) {
       setNumPages(pdf.numPages);
       // Scroll to last page on load
-      if (currentPdf.lastPage > 1 && scrollContainerRef.current) {
-        // We can't perfectly scroll to a virtual page that hasn't rendered, 
-        // but we can estimate or just let the user scroll.
-        // For a robust implementation, we'd need a virtual list with known heights.
-        // For now, we'll just start at the top and let the user resume.
+      if (currentPdf.lastPage > 1) {
+        setTimeout(() => {
+          if (virtuosoRef.current) {
+            virtuosoRef.current.scrollToIndex({
+              index: currentPdf.lastPage - 1,
+              align: 'start'
+            });
+          }
+        }, 100);
       }
     }
   }, [pdf, currentPdf.lastPage]);
@@ -227,15 +239,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   };
 
   const scrollToPage = (page: number) => {
-    const el = document.getElementById(`page-${page}`);
-    if (el && scrollContainerRef.current) {
-      // Calculate position relative to scroll container
-      const containerTop = scrollContainerRef.current.getBoundingClientRect().top;
-      const elTop = el.getBoundingClientRect().top;
-      const currentScroll = scrollContainerRef.current.scrollTop;
-      
-      scrollContainerRef.current.scrollTo({
-        top: currentScroll + elTop - containerTop,
+    if (virtuosoRef.current) {
+      virtuosoRef.current.scrollToIndex({
+        index: page - 1,
+        align: 'start',
         behavior: 'smooth'
       });
       setShowBookmarks(false);
@@ -275,6 +282,12 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     return () => cancelAnimationFrame(animationFrameId);
   }, [autoScrollSpeed]);
 
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.focus();
+    }
+  }, []);
+
   // Volume button scroll logic
   useEffect(() => {
     if (!volumeScroll) return;
@@ -302,9 +315,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [volumeScroll]);
 
-  const handleVisible = (pageNumber: number) => {
+  const handleVisible = React.useCallback((pageNumber: number) => {
     setCurrentPage(pageNumber);
-  };
+  }, []);
 
   const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
@@ -514,7 +527,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
       {/* Scroll Container */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden"
+        tabIndex={-1}
+        className="flex-1 overflow-y-auto overflow-x-hidden outline-none"
         onClick={handleTap}
       >
         {!pdf ? (
@@ -540,33 +554,42 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
             </div>
           </div>
         ) : (
-          <div className={clsx("mx-auto flex flex-col items-center", readingMode === 'manga' ? "w-full" : "py-8 max-w-4xl px-4")}>
-            {Array.from({ length: numPages }, (_, i) => (
-              <VirtualPdfPage
-                key={i + 1}
-                pdf={pdf}
-                pageNumber={i + 1}
-                defaultHeight={window.innerHeight}
-                readingMode={readingMode || 'standard'}
-                onVisible={handleVisible}
-              />
-            ))}
-            
-            {/* End of PDF marker */}
-            {currentPage === numPages && nextPdfDoc && (
-              <div ref={endMarkerRef} className="py-12 text-center">
-                <p className="text-zinc-400 mb-4">End of {currentPdf.name}</p>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onNextPdf(nextPdfDoc.id); }}
-                  className={clsx("bg-zinc-100 text-zinc-900 px-6 py-3 rounded-full font-medium", autoAdvanceDelay && autoAdvanceDelay > 0 && "animate-pulse")}
-                >
-                  {autoAdvanceDelay && autoAdvanceDelay > 0 
-                    ? `Auto-opening next in ${autoAdvanceDelay / 1000}s: ${nextPdfDoc.name}...`
-                    : `Read Next: ${nextPdfDoc.name}`
-                  }
-                </button>
-              </div>
-            )}
+          <div className={clsx("mx-auto flex flex-col h-full", readingMode === 'manga' ? "w-full" : "py-8 max-w-4xl px-4")}>
+            <Virtuoso
+              ref={virtuosoRef}
+              useWindowScroll={false}
+              customScrollParent={scrollContainerRef.current as HTMLElement}
+              totalCount={numPages}
+              overscan={window.innerHeight * 3}
+              itemContent={(index) => (
+                <VirtualPdfPage
+                  key={index + 1}
+                  pdf={pdf}
+                  pageNumber={index + 1}
+                  defaultHeight={window.innerHeight}
+                  readingMode={readingMode || 'standard'}
+                  onVisible={handleVisible}
+                />
+              )}
+              components={{
+                Footer: () => (
+                  currentPage === numPages && nextPdfDoc ? (
+                    <div ref={endMarkerRef} className="py-12 text-center">
+                      <p className="text-zinc-400 mb-4">End of {currentPdf.name}</p>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onNextPdf(nextPdfDoc.id); }}
+                        className={clsx("bg-zinc-100 text-zinc-900 px-6 py-3 rounded-full font-medium", autoAdvanceDelay && autoAdvanceDelay > 0 && "animate-pulse")}
+                      >
+                        {autoAdvanceDelay && autoAdvanceDelay > 0 
+                          ? `Auto-opening next in ${autoAdvanceDelay / 1000}s: ${nextPdfDoc.name}...`
+                          : `Read Next: ${nextPdfDoc.name}`
+                        }
+                      </button>
+                    </div>
+                  ) : <div />
+                )
+              }}
+            />
           </div>
         )}
       </div>

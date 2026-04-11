@@ -5,22 +5,30 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 // Set worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
-export function usePdf(blob: Blob | undefined) {
+export function usePdf(source: Blob | string | undefined) {
   const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [loadProgress, setLoadProgress] = useState(0);
 
   useEffect(() => {
-    if (!blob) {
+    if (!source) {
       setPdf(null);
       setLoadProgress(0);
       return;
     }
 
     let isMounted = true;
-    const url = URL.createObjectURL(blob);
+    let urlToUse: string;
+    let isBlobUrl = false;
+
+    if (typeof source === 'string') {
+      urlToUse = source;
+    } else {
+      urlToUse = URL.createObjectURL(source);
+      isBlobUrl = true;
+    }
     
-    const loadingTask = pdfjsLib.getDocument(url);
+    const loadingTask = pdfjsLib.getDocument(urlToUse);
     
     loadingTask.onProgress = (p) => {
       if (isMounted && p.total) {
@@ -40,9 +48,11 @@ export function usePdf(blob: Blob | undefined) {
     return () => {
       isMounted = false;
       loadingTask.destroy();
-      URL.revokeObjectURL(url);
+      if (isBlobUrl) {
+        URL.revokeObjectURL(urlToUse);
+      }
     };
-  }, [blob]);
+  }, [source]);
 
   return { pdf, error, loadProgress };
 }

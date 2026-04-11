@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { useIntersection } from 'react-use';
 import * as pdfjsLib from 'pdfjs-dist';
 import { PdfPage } from './PdfPage';
@@ -11,15 +11,8 @@ interface VirtualPdfPageProps {
   onVisible: (pageNumber: number) => void;
 }
 
-export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber, defaultHeight, readingMode = 'standard', onVisible }) => {
+export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMode = 'standard', onVisible }: VirtualPdfPageProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const intersection = useIntersection(containerRef, {
-    root: null,
-    rootMargin: '1000px 0px', // Render 1000px above and below viewport
-    threshold: 0,
-  });
-
-  const isVisible = intersection && intersection.isIntersecting;
   const [actualHeight, setActualHeight] = useState<number | null>(null);
 
   // Track visibility for reading progress
@@ -42,17 +35,15 @@ export const VirtualPdfPage: React.FC<VirtualPdfPageProps> = ({ pdf, pageNumber,
       className={`w-full flex justify-center ${readingMode === 'manga' ? '' : 'mb-4'}`}
       style={{ minHeight: actualHeight || defaultHeight }}
     >
-      {isVisible ? (
-        <PdfPage
-          pdf={pdf}
-          pageNumber={pageNumber}
-          scale={readingMode === 'manga' ? (window.innerWidth < 768 ? 1.5 : 2.5) : (window.innerWidth < 768 ? 1.2 : 2.0)}
-          readingMode={readingMode}
-          onPageRendered={(_, __, height) => setActualHeight(height)}
-        />
-      ) : (
-        <div className="w-full h-full bg-zinc-900 animate-pulse" />
-      )}
+      <PdfPage
+        pdf={pdf}
+        pageNumber={pageNumber}
+        scale={readingMode === 'manga' ? (window.innerWidth < 768 ? 1.5 : 2.5) : (window.innerWidth < 768 ? 1.2 : 2.0)}
+        readingMode={readingMode}
+        onPageRendered={(_, __, height) => setActualHeight(height)}
+      />
     </div>
   );
-};
+});
+
+VirtualPdfPage.displayName = 'VirtualPdfPage';

@@ -16,10 +16,12 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
   useEffect(() => {
     let isMounted = true;
     let currentRenderTask: pdfjsLib.RenderTask | null = null;
+    let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
 
     const renderPage = async () => {
       try {
         const page = await pdf.getPage(pageNumber);
+        currentPageObj = page;
         if (!isMounted) return;
 
         const viewport = page.getViewport({ scale });
@@ -63,6 +65,13 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
           currentRenderTask.cancel();
         } catch (e) {
           // Ignore cancellation errors
+        }
+      }
+      if (currentPageObj) {
+        try {
+          currentPageObj.cleanup();
+        } catch (e) {
+          // Ignore cleanup errors
         }
       }
     };
