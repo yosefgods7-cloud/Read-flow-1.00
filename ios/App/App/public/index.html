@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ReadFlow</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#09090b">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwMCIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjQwIiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjM1ZW0iPlI8L3RleHQ+PC9zdmc+">
+    <script>
+      // Fix GitHub Pages trailing slash issue for relative paths
+      (function() {
+        var l = window.location;
+        if (l.hostname.indexOf('github.io') > -1 && !l.pathname.endsWith('/') && l.pathname.split('/').pop().indexOf('.') === -1) {
+          l.replace(l.pathname + '/' + l.search + l.hash);
+        }
+      })();
+
+      // Robust Error Handler to catch script load failures and runtime errors
+      function showError(msg) {
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#ef4444;color:white;padding:10px;z-index:9999;font-family:monospace;font-size:12px;word-wrap:break-word;';
+        errDiv.innerText = msg;
+        if (document.body) {
+          document.body.appendChild(errDiv);
+        } else {
+          window.addEventListener('DOMContentLoaded', function() {
+            document.body.appendChild(errDiv);
+          });
+        }
+      }
+      window.addEventListener('error', function(e) {
+        var msg = 'Global Error: ';
+        if (e.message) {
+          msg += e.message + (e.filename ? ' at ' + e.filename + ':' + e.lineno : '');
+        } else if (e.target && e.target.src) {
+          msg += 'Failed to load script: ' + e.target.src;
+        } else if (e.target && e.target.href) {
+          msg += 'Failed to load style: ' + e.target.href;
+        } else {
+          msg += JSON.stringify(e);
+        }
+        showError(msg);
+      }, true); // capture phase for resource errors
+      window.addEventListener('unhandledrejection', function(e) {
+        showError('Promise Rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+      });
+    </script>
+    <script type="module" crossorigin src="./assets/index-CIIxkVa0.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-kNjy0Zv3.css">
+  </head>
+  <body style="background-color: #09090b; color: #fafafa; margin: 0; overflow: hidden;" class="bg-zinc-950 text-zinc-50 overflow-hidden">
+    <div id="root" class="h-full w-full"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./service-worker.js').then(registration => {
+            console.log('SW registered: ', registration);
+          }).catch(registrationError => {
+            console.log('SW registration failed: ', registrationError);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>
+
