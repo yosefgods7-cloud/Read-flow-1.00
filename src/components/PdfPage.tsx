@@ -26,22 +26,28 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
 
         const baseViewport = page.getViewport({ scale: 1.0 });
         
-        // Use the requested scale directly, but slice the canvas if it exceeds MAX_DIMENSION
-        const finalScale = scale;
+        const MAX_CANVAS_DIMENSION = 3000; // Safe limit for iOS Safari
+        
+        // Use the requested scale directly, but clamp it so width doesn't exceed MAX_CANVAS_DIMENSION
+        let finalScale = scale;
+        if (baseViewport.width * finalScale > MAX_CANVAS_DIMENSION) {
+          finalScale = MAX_CANVAS_DIMENSION / baseViewport.width;
+        }
+        
         const fullViewport = page.getViewport({ scale: finalScale });
         
         if (onPageRendered) {
           onPageRendered(pageNumber, baseViewport.width, baseViewport.height);
         }
-
-        const MAX_CANVAS_DIMENSION = 3000; // Safe limit for iOS Safari
         
-        const numSlices = Math.ceil(fullViewport.height / MAX_CANVAS_DIMENSION);
+        const totalWidth = Math.ceil(fullViewport.width);
+        const totalHeight = Math.ceil(fullViewport.height);
+        const numSlices = Math.ceil(totalHeight / MAX_CANVAS_DIMENSION);
         const newSlices = [];
         
         for (let i = 0; i < numSlices; i++) {
-          const sliceHeight = Math.min(MAX_CANVAS_DIMENSION, fullViewport.height - i * MAX_CANVAS_DIMENSION);
-          newSlices.push({ width: fullViewport.width, height: sliceHeight });
+          const sliceHeight = Math.min(MAX_CANVAS_DIMENSION, totalHeight - i * MAX_CANVAS_DIMENSION);
+          newSlices.push({ width: totalWidth, height: sliceHeight });
         }
         
         setSlices(newSlices);
@@ -59,13 +65,16 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
             if (!context) continue;
 
             const sliceHeight = newSlices[i].height;
-            canvas.width = fullViewport.width;
+            const sliceWidth = newSlices[i].width;
+            canvas.width = sliceWidth;
             canvas.height = sliceHeight;
 
             // Clone viewport and adjust transform to shift content UP by i * MAX_CANVAS_DIMENSION
             const offsetY = i * MAX_CANVAS_DIMENSION;
             
-            const sliceViewport = fullViewport.clone({ offsetY: -offsetY });
+            const sliceViewport = fullViewport.clone({ dontFlip: false });
+            // Manually modify transform if clone doesn't work as expected
+            sliceViewport.transform[5] -= offsetY;
 
             const renderContext = {
               canvasContext: context,
@@ -110,8 +119,10 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
       {slices.map((slice, i) => (
         <canvas
           key={i}
-          className={`max-w-full h-auto bg-white ${readingMode === 'manga' ? 'w-full object-contain' : ''}`}
-          style={{ display: 'block', width: slice.width, height: slice.height }}
+          width={slice.width}
+          height={slice.height}
+          className={`max-w-full h-auto bg-white ${readingMode === 'manga' ? 'w-full' : ''}`}
+          style={{ display: 'block' }}
         />
       ))}
     </div>
