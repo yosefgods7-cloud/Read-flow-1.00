@@ -1,9 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Blue background with rounded corners -->
-  <rect width="512" height="512" rx="112" fill="#3b82f6"/>
-  <!-- BookOpen icon scaled up to fit 512x512 (original 24x24, scaled by ~12, centered) -->
-  <g transform="translate(112, 112) scale(12)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#27272a" />
+      <stop offset="100%" stop-color="#09090b" />
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="50%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#854d0e" />
+    </linearGradient>
+    <linearGradient id="blueWave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6" stop-opacity="0" />
+      <stop offset="20%" stop-color="#60a5fa" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#93c5fd" stop-opacity="1" />
+      <stop offset="80%" stop-color="#60a5fa" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#3b82f6" stop-opacity="0" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  
+  <!-- Blue Flowing Wave (Background Layer) -->
+  <g filter="url(#glow)">
+    <path d="M -20 256 C 150 400, 362 112, 532 256" fill="none" stroke="url(#blueWave)" stroke-width="16" stroke-linecap="round" opacity="0.3" />
+  </g>
+
+  <!-- Gold Book Symbol -->
+  <g transform="translate(256, 291)" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#goldGlow)">
+    <!-- Back pages -->
+    <path d="M 0 20 C -45 20, -90 5, -115 -20 L -115 -110 C -90 -85, -45 -70, 0 -70" stroke="url(#gold)" stroke-width="8" opacity="0.4" />
+    <path d="M 0 20 C 45 20, 90 5, 115 -20 L 115 -110 C 90 -85, 45 -70, 0 -70" stroke="url(#gold)" stroke-width="8" opacity="0.4" />
+    
+    <!-- Front pages -->
+    <path d="M 0 40 C -50 40, -100 20, -130 -10 L -130 -100 C -100 -70, -50 -50, 0 -50" stroke="url(#gold)" stroke-width="16" />
+    <path d="M 0 40 C 50 40, 100 20, 130 -10 L 130 -100 C 100 -70, 50 -50, 0 -50" stroke="url(#gold)" stroke-width="16" />
+    <line x1="0" y1="-50" x2="0" y2="40" stroke="url(#gold)" stroke-width="16" />
+  </g>
+
+  <!-- Blue Flowing Wave (Foreground Layer) -->
+  <g filter="url(#glow)">
+    <path d="M -20 256 C 150 400, 362 112, 532 256" fill="none" stroke="#60a5fa" stroke-width="3" stroke-linecap="round" opacity="0.9" />
+    <path d="M -20 276 C 150 420, 362 132, 532 276" fill="none" stroke="url(#blueWave)" stroke-width="6" stroke-linecap="round" opacity="0.8" />
+    <path d="M -20 236 C 150 380, 362 92, 532 236" fill="none" stroke="url(#blueWave)" stroke-width="6" stroke-linecap="round" opacity="0.6" />
+    
+    <!-- Extra thin energy line -->
+    <path d="M -20 266 C 150 380, 362 132, 532 246" fill="none" stroke="#bfdbfe" stroke-width="1.5" stroke-linecap="round" opacity="0.8" />
   </g>
 </svg>
