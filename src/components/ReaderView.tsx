@@ -64,7 +64,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   // TTS Logic
   useEffect(() => {
     return () => {
-      window.speechSynthesis.cancel();
+      window.speechSynthesis?.cancel();
       isReadingRef.current = false;
     };
   }, []);
@@ -113,7 +113,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   };
 
   const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
+    window.speechSynthesis?.cancel();
     setIsSpeaking(false);
     setIsPaused(false);
     isReadingRef.current = false;
@@ -154,10 +154,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
         stopSpeaking();
       };
       
-      window.speechSynthesis.speak(utterance);
+      window.speechSynthesis?.speak(utterance);
     };
     
-    window.speechSynthesis.cancel();
+    window.speechSynthesis?.cancel();
     readNext(startPage);
   };
 
@@ -165,10 +165,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     e.stopPropagation();
     if (isSpeaking) {
       if (isPaused) {
-        window.speechSynthesis.resume();
+        window.speechSynthesis?.resume();
         setIsPaused(false);
       } else {
-        window.speechSynthesis.pause();
+        window.speechSynthesis?.pause();
         setIsPaused(true);
       }
     } else {

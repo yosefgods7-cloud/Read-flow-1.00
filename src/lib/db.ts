@@ -67,17 +67,7 @@ export async function getDb() {
   return dbPromise;
 }
 
-// Helper to convert Blob to base64 for Capacitor Filesystem
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = reject;
-    reader.onload = () => {
-      resolve(reader.result as string);
-    };
-    reader.readAsDataURL(blob);
-  });
-};
+// Helper removed
 
 export async function addPdf(file: File) {
   const db = await getDb();
@@ -88,17 +78,12 @@ export async function addPdf(file: File) {
   let cursor = await index.openCursor(null, 'prev');
   const maxOrder = cursor ? cursor.value.order : 0;
   
-  generatePdfThumbnail(file).then(async (thumbnail) => {
-    if (thumbnail) {
-      const currentDb = await getDb();
-      const doc = await currentDb.get('pdfs', id);
-      if (doc) {
-        doc.thumbnail = thumbnail;
-        await currentDb.put('pdfs', doc);
-        window.dispatchEvent(new CustomEvent('pdf-thumbnail-generated'));
-      }
-    }
-  }).catch(console.error);
+  let thumbnail: string | undefined;
+  try {
+    thumbnail = await generatePdfThumbnail(file);
+  } catch (e) {
+    console.error("Thumbnail generation failed", e);
+  }
   
   const doc: PdfDocument = {
     id,
@@ -111,29 +96,17 @@ export async function addPdf(file: File) {
     priority: false,
     addedAt: Date.now(),
     bookmarks: [],
+    thumbnail,
   };
   
   if (Capacitor.isNativePlatform()) {
     try {
-      const base64Data = await blobToBase64(file);
-      // Remove data URL prefix (e.g., "data:application/pdf;base64,")
-      const base64String = base64Data.split(',')[1];
-      
-      await Filesystem.writeFile({
-        path: `${id}.pdf`,
-        data: base64String,
-        directory: Directory.Data
-      });
-      
-      const writeTx = db.transaction('pdfs', 'readwrite');
-      await writeTx.objectStore('pdfs').put(doc);
-      await writeTx.done;
-    } catch (e) {
-      console.error("Failed to save to filesystem, falling back to IDB", e);
       const writeTx = db.transaction(['pdfs', 'pdf_blobs'], 'readwrite');
       await writeTx.objectStore('pdfs').put(doc);
       await writeTx.objectStore('pdf_blobs').put(file, id);
       await writeTx.done;
+    } catch (e) {
+      console.error("Failed to save to IDB", e);
     }
   } else {
     try {
@@ -165,6 +138,9 @@ export async function addPdf(file: File) {
 }
 
 export async function getAllPdfs() {
+  // Cleanup orphaned blobs in the background
+  cleanupOrphanedBlobs().catch(console.error);
+  
   const db = await getDb();
   const tx = db.transaction('pdfs', 'readonly');
   const index = tx.store.index('by-order');
@@ -183,15 +159,10 @@ export async function getPdf(id: string) {
   if (doc) {
     if (Capacitor.isNativePlatform()) {
       try {
-        const stat = await Filesystem.stat({
-          path: `${id}.pdf`,
-          directory: Directory.Data
-        });
-        doc.url = Capacitor.convertFileSrc(stat.uri);
-      } catch (e) {
-        // Fallback if not in filesystem
         const blob = await db.get('pdf_blobs', id);
         if (blob) doc.blob = blob;
+      } catch (e) {
+        console.error("Failed to read from IDB", e);
       }
     } else {
       if (doc.url && doc.url.startsWith('opfs://')) {
@@ -226,19 +197,31 @@ export async function updatePdf(id: string, updates: Partial<PdfDocument>) {
   return updated;
 }
 
+export async function cleanupOrphanedBlobs() {
+  const db = await getDb();
+  const tx = db.transaction(['pdfs', 'pdf_blobs'], 'readwrite');
+  const pdfsStore = tx.objectStore('pdfs');
+  const blobsStore = tx.objectStore('pdf_blobs');
+  
+  const allPdfIds = await pdfsStore.getAllKeys();
+  const allBlobIds = await blobsStore.getAllKeys();
+  
+  const pdfIdsSet = new Set(allPdfIds);
+  
+  for (const blobId of allBlobIds) {
+    if (!pdfIdsSet.has(blobId)) {
+      console.log(`Cleaning up orphaned blob: ${blobId}`);
+      await blobsStore.delete(blobId);
+    }
+  }
+  
+  await tx.done;
+}
+
 export async function deletePdf(id: string) {
   const db = await getDb();
   
-  if (Capacitor.isNativePlatform()) {
-    try {
-      await Filesystem.deleteFile({
-        path: `${id}.pdf`,
-        directory: Directory.Data
-      });
-    } catch (e) {
-      console.error("Failed to delete from filesystem", e);
-    }
-  } else {
+  if (!Capacitor.isNativePlatform()) {
     try {
       if (navigator.storage && navigator.storage.getDirectory) {
         const root = await navigator.storage.getDirectory();
