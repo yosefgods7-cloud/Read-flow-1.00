@@ -10,64 +10,81 @@ interface PdfPageProps {
 }
 
 export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, readingMode = 'standard', onPageRendered }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [renderTask, setRenderTask] = useState<pdfjsLib.RenderTask | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [slices, setSlices] = useState<{ height: number; width: number }[]>([]);
+  const renderTasksRef = useRef<pdfjsLib.RenderTask[]>([]);
+  const pageObjRef = useRef<pdfjsLib.PDFPageProxy | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    let currentRenderTask: pdfjsLib.RenderTask | null = null;
-    let currentPageObj: pdfjsLib.PDFPageProxy | null = null;
 
     const renderPage = async () => {
       try {
         const page = await pdf.getPage(pageNumber);
-        currentPageObj = page;
+        pageObjRef.current = page;
         if (!isMounted) return;
 
         const baseViewport = page.getViewport({ scale: 1.0 });
         
-        // Calculate scale to fit within hardware limits (e.g., 4000px max dimension for mobile safety)
-        const MAX_DIMENSION = 4000;
-        let finalScale = scale;
+        // Use the requested scale directly, but slice the canvas if it exceeds MAX_DIMENSION
+        const finalScale = scale;
+        const fullViewport = page.getViewport({ scale: finalScale });
         
-        if (baseViewport.height * finalScale > MAX_DIMENSION || baseViewport.width * finalScale > MAX_DIMENSION) {
-          const scaleFactor = Math.min(
-            MAX_DIMENSION / baseViewport.height,
-            MAX_DIMENSION / baseViewport.width
-          );
-          finalScale = scaleFactor;
-        }
-
-        const viewport = page.getViewport({ scale: finalScale });
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const context = canvas.getContext('2d');
-        if (!context) return;
-
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
         if (onPageRendered) {
-          // Pass the original unscaled dimensions for accurate aspect ratio
           onPageRendered(pageNumber, baseViewport.width, baseViewport.height);
         }
 
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
-        };
-
-        currentRenderTask = page.render(renderContext);
-        setRenderTask(currentRenderTask);
-
-        await currentRenderTask.promise;
-      } catch (err: any) {
-        if (err.name === 'RenderingCancelledException') {
-          // Expected when unmounting
-        } else {
-          console.error(`Error rendering page ${pageNumber}:`, err);
+        const MAX_CANVAS_DIMENSION = 3000; // Safe limit for iOS Safari
+        
+        const numSlices = Math.ceil(fullViewport.height / MAX_CANVAS_DIMENSION);
+        const newSlices = [];
+        
+        for (let i = 0; i < numSlices; i++) {
+          const sliceHeight = Math.min(MAX_CANVAS_DIMENSION, fullViewport.height - i * MAX_CANVAS_DIMENSION);
+          newSlices.push({ width: fullViewport.width, height: sliceHeight });
         }
+        
+        setSlices(newSlices);
+
+        // Wait for state to update and canvases to be rendered in DOM
+        setTimeout(() => {
+          if (!isMounted || !containerRef.current) return;
+          
+          const canvases = containerRef.current.querySelectorAll('canvas');
+          if (canvases.length !== numSlices) return;
+
+          for (let i = 0; i < numSlices; i++) {
+            const canvas = canvases[i];
+            const context = canvas.getContext('2d');
+            if (!context) continue;
+
+            const sliceHeight = newSlices[i].height;
+            canvas.width = fullViewport.width;
+            canvas.height = sliceHeight;
+
+            // Clone viewport and adjust transform to shift content UP by i * MAX_CANVAS_DIMENSION
+            const offsetY = i * MAX_CANVAS_DIMENSION;
+            
+            const sliceViewport = fullViewport.clone({ offsetY: -offsetY });
+
+            const renderContext = {
+              canvasContext: context,
+              viewport: sliceViewport,
+            };
+
+            const renderTask = page.render(renderContext);
+            renderTasksRef.current.push(renderTask);
+            
+            renderTask.promise.catch(err => {
+              if (err.name !== 'RenderingCancelledException') {
+                console.error(`Error rendering page ${pageNumber} slice ${i}:`, err);
+              }
+            });
+          }
+        }, 0);
+
+      } catch (err: any) {
+        console.error(`Error loading page ${pageNumber}:`, err);
       }
     };
 
@@ -75,28 +92,28 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
 
     return () => {
       isMounted = false;
-      if (currentRenderTask && typeof currentRenderTask.cancel === 'function') {
-        try {
-          currentRenderTask.cancel();
-        } catch (e) {
-          // Ignore cancellation errors
+      renderTasksRef.current.forEach(task => {
+        if (task && typeof task.cancel === 'function') {
+          try { task.cancel(); } catch (e) {}
         }
-      }
-      if (currentPageObj) {
-        try {
-          currentPageObj.cleanup();
-        } catch (e) {
-          // Ignore cleanup errors
-        }
+      });
+      renderTasksRef.current = [];
+      
+      if (pageObjRef.current) {
+        try { pageObjRef.current.cleanup(); } catch (e) {}
       }
     };
   }, [pdf, pageNumber, scale]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className={`max-w-full h-auto mx-auto bg-white ${readingMode === 'manga' ? 'w-full object-contain' : 'shadow-md'}`}
-      style={{ display: 'block' }}
-    />
+    <div ref={containerRef} className={`flex flex-col items-center ${readingMode === 'manga' ? 'w-full' : 'shadow-md'}`}>
+      {slices.map((slice, i) => (
+        <canvas
+          key={i}
+          className={`max-w-full h-auto bg-white ${readingMode === 'manga' ? 'w-full object-contain' : ''}`}
+          style={{ display: 'block', width: slice.width, height: slice.height }}
+        />
+      ))}
+    </div>
   );
 };

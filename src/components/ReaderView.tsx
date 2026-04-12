@@ -49,10 +49,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     setCurrentSource(undefined);
     getPdf(currentPdf.id).then(doc => {
       if (isMounted && doc) {
-        if (doc.url) {
-          setCurrentSource(doc.url);
-        } else if (doc.blob) {
+        if (doc.blob) {
           setCurrentSource(doc.blob);
+        } else if (doc.url && !doc.url.startsWith('opfs://')) {
+          setCurrentSource(doc.url);
         }
       }
     });
@@ -349,7 +349,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       if (callbackId && Capacitor.isNativePlatform()) {
-        VolumeButtons.clearWatch({ id: callbackId }).catch(console.error);
+        VolumeButtons.clearWatch().catch(console.error);
       }
     };
   }, [volumeScroll]);

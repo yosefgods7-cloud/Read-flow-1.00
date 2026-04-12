@@ -35,6 +35,7 @@ export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMod
       className={`w-full flex justify-center ${readingMode === 'manga' ? '' : 'mb-4'}`}
       style={{ 
         minHeight: aspectRatio ? undefined : defaultHeight,
+        aspectRatio: aspectRatio ? `${aspectRatio}` : undefined,
       }}
     >
       <PdfPage

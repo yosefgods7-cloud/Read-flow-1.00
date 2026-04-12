@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Blue background with rounded corners -->
+  <rect width="512" height="512" rx="112" fill="#3b82f6"/>
+  <!-- BookOpen icon scaled up to fit 512x512 (original 24x24, scaled by ~12, centered) -->
+  <g transform="translate(112, 112) scale(12)" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+  </g>
+</svg>
