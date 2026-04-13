@@ -36,6 +36,18 @@ interface ReadFlowDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<ReadFlowDB>> | null = null;
 
+// Helper to convert Blob to base64 for Capacitor Filesystem
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
 export async function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<ReadFlowDB>('readflow-db', 2, {
@@ -101,12 +113,25 @@ export async function addPdf(file: File) {
   
   if (Capacitor.isNativePlatform()) {
     try {
+      const base64Data = await blobToBase64(file);
+      // Remove data URL prefix (e.g., "data:application/pdf;base64,")
+      const base64String = base64Data.split(',')[1];
+      
+      await Filesystem.writeFile({
+        path: `${id}.pdf`,
+        data: base64String,
+        directory: Directory.Data
+      });
+      
+      const writeTx = db.transaction('pdfs', 'readwrite');
+      await writeTx.objectStore('pdfs').put(doc);
+      await writeTx.done;
+    } catch (e) {
+      console.error("Failed to save to filesystem, falling back to IDB", e);
       const writeTx = db.transaction(['pdfs', 'pdf_blobs'], 'readwrite');
       await writeTx.objectStore('pdfs').put(doc);
       await writeTx.objectStore('pdf_blobs').put(file, id);
       await writeTx.done;
-    } catch (e) {
-      console.error("Failed to save to IDB", e);
     }
   } else {
     try {
@@ -159,10 +184,15 @@ export async function getPdf(id: string) {
   if (doc) {
     if (Capacitor.isNativePlatform()) {
       try {
+        const stat = await Filesystem.stat({
+          path: `${id}.pdf`,
+          directory: Directory.Data
+        });
+        doc.url = Capacitor.convertFileSrc(stat.uri);
+      } catch (e) {
+        // Fallback if not in filesystem
         const blob = await db.get('pdf_blobs', id);
         if (blob) doc.blob = blob;
-      } catch (e) {
-        console.error("Failed to read from IDB", e);
       }
     } else {
       if (doc.url && doc.url.startsWith('opfs://')) {
@@ -221,7 +251,16 @@ export async function cleanupOrphanedBlobs() {
 export async function deletePdf(id: string) {
   const db = await getDb();
   
-  if (!Capacitor.isNativePlatform()) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Filesystem.deleteFile({
+        path: `${id}.pdf`,
+        directory: Directory.Data
+      });
+    } catch (e) {
+      console.error("Failed to delete from filesystem", e);
+    }
+  } else {
     try {
       if (navigator.storage && navigator.storage.getDirectory) {
         const root = await navigator.storage.getDirectory();

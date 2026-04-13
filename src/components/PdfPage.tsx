@@ -26,7 +26,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
 
         const baseViewport = page.getViewport({ scale: 1.0 });
         
-        const MAX_CANVAS_DIMENSION = 3000; // Safe limit for iOS Safari
+        const MAX_CANVAS_DIMENSION = 2048; // Safe limit for iOS Safari and older Androids
         
         // Use the requested scale directly, but clamp it so width doesn't exceed MAX_CANVAS_DIMENSION
         let finalScale = scale;
@@ -110,6 +110,15 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
       
       if (pageObjRef.current) {
         try { pageObjRef.current.cleanup(); } catch (e) {}
+      }
+      
+      // Free canvas memory
+      if (containerRef.current) {
+        const canvases = containerRef.current.querySelectorAll('canvas');
+        canvases.forEach(c => {
+          c.width = 0;
+          c.height = 0;
+        });
       }
     };
   }, [pdf, pageNumber, scale]);

@@ -220,7 +220,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   useEffect(() => {
     if (numPages > 0) {
       const currentProgress = (currentPage / numPages) * 100;
-      const status = currentProgress >= 99 ? 'completed' : 'reading';
+      const status = currentProgress >= 90 ? 'completed' : 'reading';
       updatePdf(currentPdf.id, { 
         lastPage: currentPage, 
         progress: currentProgress,
@@ -564,6 +564,15 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
         tabIndex={-1}
         className="flex-1 overflow-y-auto overflow-x-hidden outline-none"
         onClick={handleTap}
+        onScroll={(e) => {
+          const target = e.currentTarget;
+          // If we are within 200px of the bottom, consider it the last page
+          if (target.scrollHeight - target.scrollTop - target.clientHeight < 200) {
+            if (currentPage !== numPages && numPages > 0) {
+              setCurrentPage(numPages);
+            }
+          }
+        }}
       >
         {!pdf ? (
           <div className="flex items-center justify-center h-full px-6">
@@ -607,8 +616,9 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                 />
               )}
               components={{
-                Footer: () => (
-                  currentPage === numPages && nextPdfDoc ? (
+                Footer: () => {
+                  const isNearEnd = numPages > 0 && (currentPage >= numPages - 1 || (currentPage / numPages) >= 0.9);
+                  return isNearEnd && nextPdfDoc ? (
                     <div ref={endMarkerRef} className="py-12 text-center">
                       <p className="text-zinc-400 mb-4">End of {currentPdf.name}</p>
                       <button 
@@ -621,8 +631,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                         }
                       </button>
                     </div>
-                  ) : <div />
-                )
+                  ) : <div />;
+                }
               }}
             />
             )}
