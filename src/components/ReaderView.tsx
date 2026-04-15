@@ -193,11 +193,22 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
     }
   };
 
-  const endIntersection = useIntersection(endMarkerRef, {
-    root: null,
-    rootMargin: '0px',
-    threshold: 1.0,
-  });
+  const [isEndVisible, setIsEndVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsEndVisible(entry.isIntersecting);
+      },
+      { root: null, rootMargin: '0px', threshold: 0.1 }
+    );
+
+    if (endMarkerRef.current) {
+      observer.observe(endMarkerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [endMarkerRef.current]);
 
   useEffect(() => {
     if (pdf) {
@@ -220,7 +231,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
   useEffect(() => {
     if (numPages > 0) {
       const currentProgress = (currentPage / numPages) * 100;
-      const status = currentProgress >= 90 ? 'completed' : 'reading';
+      const status = currentProgress >= 85 ? 'completed' : 'reading';
       updatePdf(currentPdf.id, { 
         lastPage: currentPage, 
         progress: currentProgress,
@@ -253,13 +264,13 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
   // Auto open next
   useEffect(() => {
-    if (endIntersection?.isIntersecting && nextPdfDoc && autoAdvanceDelay && autoAdvanceDelay > 0) {
+    if (isEndVisible && nextPdfDoc && autoAdvanceDelay && autoAdvanceDelay > 0) {
       const timer = setTimeout(() => {
         onNextPdf(nextPdfDoc.id);
       }, autoAdvanceDelay);
       return () => clearTimeout(timer);
     }
-  }, [endIntersection?.isIntersecting, currentPdf.id, allPdfs, onNextPdf, autoAdvanceDelay, nextPdfDoc]);
+  }, [isEndVisible, currentPdf.id, allPdfs, onNextPdf, autoAdvanceDelay, nextPdfDoc]);
 
   // Auto-scroll logic
   useEffect(() => {
@@ -605,6 +616,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                 customScrollParent={scrollElement}
                 totalCount={numPages}
                 overscan={window.innerHeight * 3}
+                endReached={() => {
+                  if (currentPage !== numPages && numPages > 0) {
+                    setCurrentPage(numPages);
+                  }
+                }}
                 itemContent={(index) => (
                 <VirtualPdfPage
                   key={index + 1}
@@ -617,7 +633,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
               )}
               components={{
                 Footer: () => {
-                  const isNearEnd = numPages > 0 && (currentPage >= numPages - 1 || (currentPage / numPages) >= 0.9);
+                  const isNearEnd = numPages > 0 && (currentPage >= numPages - 1 || (currentPage / numPages) >= 0.85);
                   return isNearEnd && nextPdfDoc ? (
                     <div ref={endMarkerRef} className="py-12 text-center">
                       <p className="text-zinc-400 mb-4">End of {currentPdf.name}</p>

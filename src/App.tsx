@@ -41,6 +41,7 @@ export default function App() {
     <div className="h-screen w-full bg-zinc-950 text-zinc-50">
       {currentPdf ? (
         <ReaderView 
+          key={currentPdf.id}
           currentPdf={currentPdf} 
           allPdfs={pdfs}
           onBack={() => {
