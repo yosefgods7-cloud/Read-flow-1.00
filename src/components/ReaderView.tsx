@@ -615,7 +615,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                 useWindowScroll={false}
                 customScrollParent={scrollElement}
                 totalCount={numPages}
-                overscan={window.innerHeight * 3}
+                overscan={window.innerHeight * 5}
                 endReached={() => {
                   if (currentPage !== numPages && numPages > 0) {
                     setCurrentPage(numPages);
