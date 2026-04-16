@@ -8,10 +8,11 @@ interface VirtualPdfPageProps {
   pageNumber: number;
   defaultHeight: number;
   readingMode?: 'standard' | 'manga';
+  isScrollingFast?: boolean;
   onVisible: (pageNumber: number) => void;
 }
 
-export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMode = 'standard', onVisible }: VirtualPdfPageProps) => {
+export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMode = 'standard', isScrollingFast = false, onVisible }: VirtualPdfPageProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [aspectRatio, setAspectRatio] = useState<number | null>(null);
 
@@ -43,6 +44,7 @@ export const VirtualPdfPage = memo(({ pdf, pageNumber, defaultHeight, readingMod
         pageNumber={pageNumber}
         scale={readingMode === 'manga' ? (window.innerWidth < 768 ? 1.5 : 2.5) : (window.innerWidth < 768 ? 1.2 : 2.0)}
         readingMode={readingMode}
+        isScrollingFast={isScrollingFast}
         onPageRendered={(_, width, height) => setAspectRatio(width / height)}
       />
     </div>

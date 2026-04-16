@@ -35,6 +35,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isScrollingFast, setIsScrollingFast] = useState(false);
   const isReadingRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -615,7 +616,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                 useWindowScroll={false}
                 customScrollParent={scrollElement}
                 totalCount={numPages}
-                overscan={window.innerHeight * 5}
+                overscan={window.innerHeight * 2}
+                isScrolling={(isScrolling) => {
+                  // Debounce the scrolling state slightly to prevent rapid toggling
+                  setIsScrollingFast(isScrolling);
+                }}
                 endReached={() => {
                   if (currentPage !== numPages && numPages > 0) {
                     setCurrentPage(numPages);
@@ -628,6 +633,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({ currentPdf, allPdfs, onB
                   pageNumber={index + 1}
                   defaultHeight={window.innerHeight}
                   readingMode={readingMode || 'standard'}
+                  isScrollingFast={isScrollingFast}
                   onVisible={handleVisible}
                 />
               )}

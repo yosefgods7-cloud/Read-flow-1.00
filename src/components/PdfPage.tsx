@@ -3,17 +3,18 @@ import * as pdfjsLib from 'pdfjs-dist';
 
 // Global cache for rendered page slices (Blob URLs) to prevent white flashes and speed up scrolling
 const pageImageCache = new Map<string, string[]>();
-const MAX_CACHE_PAGES = 40; // Keep last 40 pages in memory
+const MAX_CACHE_PAGES = 10; // Keep last 10 pages in memory (reduced for low RAM devices)
 
 interface PdfPageProps {
   pdf: pdfjsLib.PDFDocumentProxy;
   pageNumber: number;
   scale?: number;
   readingMode?: 'standard' | 'manga';
+  isScrollingFast?: boolean;
   onPageRendered?: (pageNumber: number, width: number, height: number) => void;
 }
 
-export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, readingMode = 'standard', onPageRendered }) => {
+export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, readingMode = 'standard', isScrollingFast = false, onPageRendered }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [slices, setSlices] = useState<{ height: number; width: number }[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
@@ -28,6 +29,9 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
     const cacheKey = `${pdf.fingerprint || 'doc'}_${pageNumber}_${readingMode}`;
 
     const renderPage = async () => {
+      // Delay rendering if scrolling fast to prevent CPU spikes
+      if (isScrollingFast) return;
+
       try {
         // 1. Check if we already have this page cached
         if (pageImageCache.has(cacheKey)) {
@@ -37,7 +41,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
           const page = await pdf.getPage(pageNumber);
           const baseViewport = page.getViewport({ scale: 1.0 });
           
-          const pixelRatio = window.devicePixelRatio || 1;
+          const pixelRatio = Math.min(window.devicePixelRatio || 1, 2); // Clamp to 2 for performance
           let targetScale = scale;
           if (readingMode === 'manga') {
             targetScale = (window.innerWidth * pixelRatio) / baseViewport.width;
@@ -45,7 +49,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
             targetScale = (window.innerWidth * 0.95 * pixelRatio) / baseViewport.width;
           }
           
-          const MAX_CANVAS_WIDTH = 4096;
+          const MAX_CANVAS_WIDTH = 1440; // Clamped for low RAM
           let finalScale = targetScale;
           if (baseViewport.width * finalScale > MAX_CANVAS_WIDTH) {
             finalScale = MAX_CANVAS_WIDTH / baseViewport.width;
@@ -82,11 +86,11 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
 
         const baseViewport = page.getViewport({ scale: 1.0 });
         
-        const MAX_CANVAS_WIDTH = 4096; // iOS max width limit
+        const MAX_CANVAS_WIDTH = 1440; // Clamped for low RAM
         const MAX_CANVAS_HEIGHT = 2048; // Keep slices small for memory safety
         
         // Calculate optimal scale for crisp rendering on high-DPI displays
-        const pixelRatio = window.devicePixelRatio || 1;
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2); // Clamp to 2
         let targetScale = scale;
         
         if (readingMode === 'manga') {
@@ -170,6 +174,10 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
                     newImageUrls[i] = url;
                     completedSlices++;
                     
+                    // AGGRESSIVE MEMORY FREE
+                    canvas.width = 0;
+                    canvas.height = 0;
+                    
                     // If all slices are done, update state and cache
                     if (completedSlices === numSlices) {
                       setImageUrls([...newImageUrls]);
@@ -187,7 +195,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
                       pageImageCache.set(cacheKey, [...newImageUrls]);
                     }
                   }
-                }, 'image/jpeg', 0.85); // Use JPEG for smaller memory footprint
+                }, 'image/jpeg', 0.80); // Use JPEG 80% for smaller memory footprint
               }
             } catch (err: any) {
               if (err.name !== 'RenderingCancelledException') {
@@ -213,8 +221,10 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
       });
       renderTasksRef.current = [];
       
-      // We no longer cleanup the pageObjRef here because we want PDF.js to cache the parsed page data
-      // for faster re-rendering if it falls out of our image cache.
+      // Explicitly cleanup PDF.js internal page cache to save RAM on low-end devices
+      if (pageObjRef.current) {
+        try { pageObjRef.current.cleanup(); } catch (e) {}
+      }
       
       // Free canvas memory immediately
       if (containerRef.current) {
@@ -225,7 +235,7 @@ export const PdfPage: React.FC<PdfPageProps> = ({ pdf, pageNumber, scale = 1.5, 
         });
       }
     };
-  }, [pdf, pageNumber, scale, readingMode]);
+  }, [pdf, pageNumber, scale, readingMode, isScrollingFast]);
 
   return (
     <div ref={containerRef} className={`flex flex-col items-center ${readingMode === 'manga' ? 'w-full' : 'shadow-md'}`}>
